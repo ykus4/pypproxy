@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import time
-from typing import Dict, List, Optional, Tuple
 
 from ..rule.rule import Action, MatchContext, Modification, RuleManager
 from ..store.models import Entry
@@ -20,9 +19,9 @@ class Interceptor:
         host: str,
         path: str,
         query: str,
-        headers: Dict[str, List[str]],
+        headers: dict[str, list[str]],
         body: bytes,
-    ) -> Tuple[Entry, bool]:
+    ) -> tuple[Entry, bool]:
         entry = Entry(
             method=method,
             scheme=scheme,
@@ -64,10 +63,10 @@ class Interceptor:
         self,
         entry: Entry,
         status_code: int,
-        headers: Dict[str, List[str]],
+        headers: dict[str, list[str]],
         body: bytes,
         start_time: float,
-    ) -> Tuple[Dict[str, List[str]], bytes]:
+    ) -> tuple[dict[str, list[str]], bytes]:
         entry.status_code = status_code
         entry.resp_headers = dict(headers)
         entry.resp_body = body
@@ -93,10 +92,10 @@ class Interceptor:
 
 
 def _apply_request_mods(
-    headers: Dict[str, List[str]],
+    headers: dict[str, list[str]],
     body: bytes,
-    mods: List[Modification],
-) -> Tuple[Dict[str, List[str]], bytes]:
+    mods: list[Modification],
+) -> tuple[dict[str, list[str]], bytes]:
     headers = dict(headers)
     for m in mods:
         if m.target == "req_header":
@@ -107,10 +106,10 @@ def _apply_request_mods(
 
 
 def _apply_response_mods(
-    headers: Dict[str, List[str]],
+    headers: dict[str, list[str]],
     body: bytes,
-    mods: List[Modification],
-) -> Tuple[Dict[str, List[str]], bytes]:
+    mods: list[Modification],
+) -> tuple[dict[str, list[str]], bytes]:
     headers = dict(headers)
     for m in mods:
         if m.target == "resp_header":
@@ -123,9 +122,7 @@ def _apply_response_mods(
     return headers, body
 
 
-def _apply_header_mod(
-    headers: Dict[str, List[str]], m: Modification
-) -> Dict[str, List[str]]:
+def _apply_header_mod(headers: dict[str, list[str]], m: Modification) -> dict[str, list[str]]:
     h = {k.lower(): v for k, v in headers.items()}
     key = m.key.lower()
     if m.operation == "set":

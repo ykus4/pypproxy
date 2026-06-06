@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
-import sys
 from pathlib import Path
-from typing import Optional
 
 
 class ScriptEngine:
@@ -31,7 +29,7 @@ class ScriptEngine:
         if fn is None:
             return body
         result = fn(method, host, path, body)
-        if isinstance(result, (bytes, bytearray)):
+        if isinstance(result, bytes | bytearray):
             return bytes(result)
         if isinstance(result, str):
             return result.encode()
@@ -44,7 +42,7 @@ class ScriptEngine:
         if fn is None:
             return body
         result = fn(status, body)
-        if isinstance(result, (bytes, bytearray)):
+        if isinstance(result, bytes | bytearray):
             return bytes(result)
         if isinstance(result, str):
             return result.encode()

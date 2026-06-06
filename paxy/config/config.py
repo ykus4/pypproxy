@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Optional
 
 import yaml
 
@@ -12,7 +10,7 @@ import yaml
 class ProxyConfig:
     addr: str = "0.0.0.0"
     port: int = 8080
-    ignore: List[str] = field(default_factory=list)
+    ignore: list[str] = field(default_factory=list)
     max_body: int = 1024 * 1024  # 1MB
 
 
@@ -79,9 +77,8 @@ class Config:
             if "port" in ui:
                 cfg.ui.port = int(ui["port"])
 
-        if script := data.get("script"):
-            if "path" in script:
-                cfg.script.path = script["path"]
+        if (script := data.get("script")) and "path" in script:
+            cfg.script.path = script["path"]
 
         return cfg
 

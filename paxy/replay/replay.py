@@ -4,7 +4,6 @@ import asyncio
 import base64
 import time
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
 
 import httpx
 
@@ -14,7 +13,7 @@ from ..store.models import Entry
 @dataclass
 class ReplayOptions:
     override_host: str = ""
-    extra_headers: Dict[str, str] = field(default_factory=dict)
+    extra_headers: dict[str, str] = field(default_factory=dict)
     timeout_seconds: int = 30
     count: int = 1
 
@@ -72,7 +71,7 @@ async def replay_one(entry: Entry, opts: ReplayOptions) -> ReplayResult:
         return ReplayResult(entry_id=entry.id, duration_ms=dur, error=str(e))
 
 
-async def replay_many(entry: Entry, opts: ReplayOptions) -> List[ReplayResult]:
+async def replay_many(entry: Entry, opts: ReplayOptions) -> list[ReplayResult]:
     count = max(1, opts.count)
     tasks = [replay_one(entry, opts) for _ in range(count)]
     return await asyncio.gather(*tasks)

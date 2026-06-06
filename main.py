@@ -22,8 +22,12 @@ logger = logging.getLogger("paxy")
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="paxy MITM proxy")
-    p.add_argument("--mode", choices=["gui", "cui"], default="gui",
-                   help="UI mode: gui (browser, default) or cui (terminal)")
+    p.add_argument(
+        "--mode",
+        choices=["gui", "cui"],
+        default="gui",
+        help="UI mode: gui (browser, default) or cui (terminal)",
+    )
     p.add_argument("--addr", default="", help="proxy listen address")
     p.add_argument("--port", type=int, default=0, help="proxy port (default 8080)")
     p.add_argument("--ui-addr", default="", help="web UI / API listen address")
@@ -44,17 +48,22 @@ async def run_proxy(proxy: Proxy, host: str, port: int) -> None:
 def _build_core(args: argparse.Namespace) -> tuple[Config, Proxy, Store, RuleManager]:
     cfg = Config.load(args.config) if args.config else Config.default()
 
-    if args.port:     cfg.proxy.port = args.port
-    if args.addr:     cfg.proxy.addr = args.addr
-    if args.ui_port:  cfg.ui.port = args.ui_port
-    if args.ui_addr:  cfg.ui.addr = args.ui_addr
-    if args.script:   cfg.script.path = args.script
+    if args.port:
+        cfg.proxy.port = args.port
+    if args.addr:
+        cfg.proxy.addr = args.addr
+    if args.ui_port:
+        cfg.ui.port = args.ui_port
+    if args.ui_addr:
+        cfg.ui.addr = args.ui_addr
+    if args.script:
+        cfg.script.path = args.script
 
     ca_dir = Path(args.ca_dir) if args.ca_dir else Path(cfg.ca.cert_path).parent
     ca_dir.mkdir(parents=True, exist_ok=True)
 
     cert_path = cfg.ca.cert_path or str(ca_dir / "ca-cert.pem")
-    key_path  = cfg.ca.key_path  or str(ca_dir / "ca-key.pem")
+    key_path = cfg.ca.key_path or str(ca_dir / "ca-key.pem")
     ca = CA.load_or_create(cert_path, key_path)
 
     store = Store()
@@ -85,8 +94,11 @@ def _build_core(args: argparse.Namespace) -> tuple[Config, Proxy, Store, RuleMan
 
 
 def run_gui(args: argparse.Namespace) -> None:
-    from nicegui import app as nicegui_app, ui
-    from paxy.api.server import app as api_app, init as api_init
+    from nicegui import app as nicegui_app
+    from nicegui import ui
+
+    from paxy.api.server import app as api_app
+    from paxy.api.server import init as api_init
     from paxy.ui.app import build_ui
 
     cfg, proxy, store, rules = _build_core(args)
@@ -114,7 +126,9 @@ def run_gui(args: argparse.Namespace) -> None:
 
 def run_cui(args: argparse.Namespace) -> None:
     import uvicorn
-    from paxy.api.server import app as api_app, init as api_init
+
+    from paxy.api.server import app as api_app
+    from paxy.api.server import init as api_init
     from paxy.ui.cui import run_cui as _run_cui
 
     cfg, proxy, store, rules = _build_core(args)

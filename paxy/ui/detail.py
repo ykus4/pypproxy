@@ -1,16 +1,14 @@
 from __future__ import annotations
 
-import base64
 import json
-from typing import Optional
 
 from nicegui import ui
 
 from ..store.models import Entry
-from .theme import method_badge, status_badge, status_color
+from .theme import method_badge, status_badge
 
 
-def render_detail(entry: Optional[Entry], container: ui.element) -> None:
+def render_detail(entry: Entry | None, container: ui.element) -> None:
     container.clear()
     if entry is None:
         with container:
@@ -56,7 +54,9 @@ def render_detail(entry: Optional[Entry], container: ui.element) -> None:
 
         # --- replay ---
         with ui.row().classes("q-pa-sm"):
-            ui.button("Replay", icon="replay", on_click=lambda: _replay(entry)).props("color=primary size=sm")
+            ui.button("Replay", icon="replay", on_click=lambda: _replay(entry)).props(
+                "color=primary size=sm"
+            )
 
 
 def _render_headers(headers: dict[str, list[str]]) -> None:
@@ -88,6 +88,7 @@ def _decode_body(raw: bytes) -> str:
 
 async def _replay(entry: Entry) -> None:
     import httpx
+
     url = f"{entry.scheme}://{entry.host}{entry.path}"
     if entry.query:
         url += "?" + entry.query

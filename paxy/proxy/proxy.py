@@ -4,7 +4,6 @@ import asyncio
 import logging
 import ssl
 import time
-from typing import Optional, Set
 from urllib.parse import urlparse
 
 from ..cert.ca import CA
@@ -25,8 +24,8 @@ class Proxy:
         ca: CA,
         interceptor: Interceptor,
         store: Store,
-        script: Optional[ScriptEngine] = None,
-        ignore: Optional[Set[str]] = None,
+        script: ScriptEngine | None = None,
+        ignore: set[str] | None = None,
     ) -> None:
         self._ca = ca
         self._interceptor = interceptor
@@ -82,7 +81,7 @@ class Proxy:
             tls_reader, tls_writer = await asyncio.wait_for(
                 self._upgrade_server_tls(reader, writer, ssl_ctx), timeout=10
             )
-        except (ssl.SSLError, asyncio.TimeoutError, OSError) as e:
+        except (TimeoutError, ssl.SSLError, OSError) as e:
             logger.debug("TLS handshake failed for %s: %s", host, e)
             return
 
@@ -99,7 +98,9 @@ class Proxy:
     ) -> tuple[asyncio.StreamReader, asyncio.StreamWriter]:
         transport = writer.transport
         loop = asyncio.get_event_loop()
-        tls_transport = await loop.start_tls(transport, transport.get_protocol(), ssl_ctx, server_side=True)
+        tls_transport = await loop.start_tls(
+            transport, transport.get_protocol(), ssl_ctx, server_side=True
+        )
         tls_reader = asyncio.StreamReader()
         tls_protocol = asyncio.StreamReaderProtocol(tls_reader)
         tls_transport.set_protocol(tls_protocol)
@@ -205,8 +206,11 @@ class Proxy:
         if query:
             url += "?" + query
 
-        req_headers = {k: ", ".join(v) for k, v in headers.items()
-                       if k.lower() not in ("proxy-connection", "proxy-authorization")}
+        req_headers = {
+            k: ", ".join(v)
+            for k, v in headers.items()
+            if k.lower() not in ("proxy-connection", "proxy-authorization")
+        }
 
         start = time.monotonic()
         try:
@@ -218,7 +222,6 @@ class Proxy:
                     content=entry.req_body,
                     follow_redirects=False,
                 )
-            resp_headers = dict(resp.headers.multi_items())
             resp_body = resp.content
 
             if self._script:
@@ -252,6 +255,7 @@ class Proxy:
         headers_raw: bytes,
     ) -> None:
         from ..store.models import Entry
+
         try:
             server_reader, server_writer = await asyncio.open_connection(
                 host, port, ssl=ssl.create_default_context()
@@ -268,19 +272,24 @@ class Proxy:
         client_writer.write(resp_line + resp_headers_raw + b"\r\n")
         await client_writer.drain()
 
-        entry = self._store.add(Entry(
-            method="GET",
-            scheme="wss",
-            host=host,
-            path="/",
-            protocol="ws",
-            tags=["websocket"],
-        ))
+        entry = self._store.add(
+            Entry(
+                method="GET",
+                scheme="wss",
+                host=host,
+                path="/",
+                protocol="ws",
+                tags=["websocket"],
+            )
+        )
 
         await ws_proto.relay_frames(
-            client_reader, client_writer,
-            server_reader, server_writer,
-            entry, self._store,
+            client_reader,
+            client_writer,
+            server_reader,
+            server_writer,
+            entry,
+            self._store,
         )
 
     async def _tunnel(
@@ -314,9 +323,7 @@ class Proxy:
         )
 
 
-def _build_http_response(
-    status: int, headers: list[tuple[str, str]], body: bytes
-) -> bytes:
+def _build_http_response(status: int, headers: list[tuple[str, str]], body: bytes) -> bytes:
     reason = _STATUS.get(status, "Unknown")
     lines = [f"HTTP/1.1 {status} {reason}"]
     skip = {"transfer-encoding"}
@@ -352,9 +359,19 @@ def _parse_headers(raw: bytes) -> dict:
 
 
 _STATUS = {
-    200: "OK", 201: "Created", 204: "No Content",
-    301: "Moved Permanently", 302: "Found", 304: "Not Modified",
-    400: "Bad Request", 401: "Unauthorized", 403: "Forbidden",
-    404: "Not Found", 405: "Method Not Allowed", 429: "Too Many Requests",
-    500: "Internal Server Error", 502: "Bad Gateway", 503: "Service Unavailable",
+    200: "OK",
+    201: "Created",
+    204: "No Content",
+    301: "Moved Permanently",
+    302: "Found",
+    304: "Not Modified",
+    400: "Bad Request",
+    401: "Unauthorized",
+    403: "Forbidden",
+    404: "Not Found",
+    405: "Method Not Allowed",
+    429: "Too Many Requests",
+    500: "Internal Server Error",
+    502: "Bad Gateway",
+    503: "Service Unavailable",
 }

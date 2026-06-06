@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import logging
 import struct
-from typing import Optional
 
 from ..store.models import Entry
 from ..store.store import Store
@@ -56,7 +55,7 @@ async def relay_frames(
 
 async def read_frame(
     reader: asyncio.StreamReader,
-) -> Optional[tuple[bool, int, bytes]]:
+) -> tuple[bool, int, bytes] | None:
     try:
         header = await reader.readexactly(2)
     except asyncio.IncompleteReadError:
@@ -111,6 +110,11 @@ async def write_frame(
 
 def log_frame(entry_id: int, direction: str, opcode: int, payload: bytes) -> None:
     if opcode == OPCODE_TEXT:
-        logger.debug("ws frame entry=%d dir=%s text=%s", entry_id, direction, payload.decode(errors="replace")[:200])
+        logger.debug(
+            "ws frame entry=%d dir=%s text=%s",
+            entry_id,
+            direction,
+            payload.decode(errors="replace")[:200],
+        )
     elif opcode == OPCODE_BINARY:
         logger.debug("ws frame entry=%d dir=%s binary len=%d", entry_id, direction, len(payload))

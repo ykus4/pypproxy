@@ -4,9 +4,8 @@ import ipaddress
 import ssl
 import tempfile
 import threading
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Dict
 
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
@@ -18,7 +17,7 @@ class CA:
     def __init__(self, cert: x509.Certificate, key: rsa.RSAPrivateKey) -> None:
         self._cert = cert
         self._key = key
-        self._cache: Dict[str, ssl.SSLContext] = {}
+        self._cache: dict[str, ssl.SSLContext] = {}
         self._lock = threading.Lock()
 
     @classmethod
@@ -37,16 +36,24 @@ class CA:
     @classmethod
     def _generate(cls, cert_path: Path, key_path: Path) -> CA:
         key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         cert = (
             x509.CertificateBuilder()
-            .subject_name(x509.Name([
-                x509.NameAttribute(NameOID.COMMON_NAME, "paxy CA"),
-                x509.NameAttribute(NameOID.ORGANIZATION_NAME, "paxy"),
-            ]))
-            .issuer_name(x509.Name([
-                x509.NameAttribute(NameOID.COMMON_NAME, "paxy CA"),
-            ]))
+            .subject_name(
+                x509.Name(
+                    [
+                        x509.NameAttribute(NameOID.COMMON_NAME, "paxy CA"),
+                        x509.NameAttribute(NameOID.ORGANIZATION_NAME, "paxy"),
+                    ]
+                )
+            )
+            .issuer_name(
+                x509.Name(
+                    [
+                        x509.NameAttribute(NameOID.COMMON_NAME, "paxy CA"),
+                    ]
+                )
+            )
             .public_key(key.public_key())
             .serial_number(x509.random_serial_number())
             .not_valid_before(now - timedelta(hours=1))
@@ -54,10 +61,15 @@ class CA:
             .add_extension(x509.BasicConstraints(ca=True, path_length=None), critical=True)
             .add_extension(
                 x509.KeyUsage(
-                    digital_signature=False, content_commitment=False,
-                    key_encipherment=False, data_encipherment=False,
-                    key_agreement=False, key_cert_sign=True,
-                    crl_sign=True, encipher_only=False, decipher_only=False,
+                    digital_signature=False,
+                    content_commitment=False,
+                    key_encipherment=False,
+                    data_encipherment=False,
+                    key_agreement=False,
+                    key_cert_sign=True,
+                    crl_sign=True,
+                    encipher_only=False,
+                    decipher_only=False,
                 ),
                 critical=True,
             )
@@ -66,11 +78,13 @@ class CA:
 
         cert_path.parent.mkdir(parents=True, exist_ok=True)
         cert_path.write_bytes(cert.public_bytes(serialization.Encoding.PEM))
-        key_path.write_bytes(key.private_bytes(
-            serialization.Encoding.PEM,
-            serialization.PrivateFormat.TraditionalOpenSSL,
-            serialization.NoEncryption(),
-        ))
+        key_path.write_bytes(
+            key.private_bytes(
+                serialization.Encoding.PEM,
+                serialization.PrivateFormat.TraditionalOpenSSL,
+                serialization.NoEncryption(),
+            )
+        )
         return cls(cert, key)
 
     def cert_pem(self) -> bytes:
@@ -86,7 +100,7 @@ class CA:
 
     def _make_context(self, hostname: str) -> ssl.SSLContext:
         key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         san: list[x509.GeneralName]
         try:

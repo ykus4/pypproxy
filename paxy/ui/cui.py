@@ -1,10 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-import signal
-from typing import Optional
 
-from rich.columns import Columns
 from rich.console import Console
 from rich.layout import Layout
 from rich.live import Live
@@ -12,7 +9,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from ..store.models import Entry, Filter
+from ..store.models import Entry
 from ..store.store import Store
 
 console = Console()
@@ -53,13 +50,13 @@ def _build_table(entries: list[Entry]) -> Table:
         padding=(0, 1),
         expand=True,
     )
-    table.add_column("ID",       style="dim",    width=6,  justify="right")
-    table.add_column("Method",                   width=8,  justify="center")
-    table.add_column("Host",                     min_width=20)
-    table.add_column("Path",                     min_width=30, no_wrap=False)
-    table.add_column("Status",                   width=7,  justify="center")
-    table.add_column("ms",       style="dim",    width=6,  justify="right")
-    table.add_column("Tags",     style="dim",    width=14)
+    table.add_column("ID", style="dim", width=6, justify="right")
+    table.add_column("Method", width=8, justify="center")
+    table.add_column("Host", min_width=20)
+    table.add_column("Path", min_width=30, no_wrap=False)
+    table.add_column("Status", width=7, justify="center")
+    table.add_column("ms", style="dim", width=6, justify="right")
+    table.add_column("Tags", style="dim", width=14)
 
     for e in entries[:200]:
         tags = ",".join(e.tags) if e.tags else ""
@@ -90,18 +87,24 @@ def _build_layout(entries: list[Entry], status: str) -> Layout:
         Layout(name="footer", size=1),
     )
 
-    layout["header"].update(Panel(
-        Text("paxy", style="bold white") + Text("  MITM Proxy  ", style="dim") + Text(f"[{len(entries)} requests]", style="cyan"),
-        style="on #1a1a2e",
-        border_style="bright_blue",
-    ))
+    layout["header"].update(
+        Panel(
+            Text("paxy", style="bold white")
+            + Text("  MITM Proxy  ", style="dim")
+            + Text(f"[{len(entries)} requests]", style="cyan"),
+            style="on #1a1a2e",
+            border_style="bright_blue",
+        )
+    )
 
-    layout["body"].update(Panel(
-        _build_table(entries),
-        title="[bold]Traffic[/bold]",
-        border_style="bright_blue",
-        padding=(0, 1),
-    ))
+    layout["body"].update(
+        Panel(
+            _build_table(entries),
+            title="[bold]Traffic[/bold]",
+            border_style="bright_blue",
+            padding=(0, 1),
+        )
+    )
 
     layout["footer"].update(
         Text(f"  {status}  q: quit  c: clear  /: filter", style="dim on #16213e")
@@ -132,7 +135,10 @@ async def run_cui(store: Store, proxy_addr: str, ui_port: int) -> None:
         async def _input_loop() -> None:
             nonlocal running
             loop = asyncio.get_event_loop()
-            import sys, tty, termios
+            import sys
+            import termios
+            import tty
+
             fd = sys.stdin.fileno()
             old = termios.tcgetattr(fd)
             try:

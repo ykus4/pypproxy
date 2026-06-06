@@ -2,18 +2,17 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from enum import Enum
-from typing import Dict, List, Optional
+from enum import StrEnum
 
 
-class Action(str, Enum):
+class Action(StrEnum):
     PASSTHROUGH = "passthrough"
     MODIFY = "modify"
     BLOCK = "block"
     REDIRECT = "redirect"
 
 
-class MatchField(str, Enum):
+class MatchField(StrEnum):
     HOST = "host"
     PATH = "path"
     METHOD = "method"
@@ -27,7 +26,7 @@ class Condition:
     op: str  # equals, contains, prefix, regex
     value: str
     negate: bool = False
-    _compiled: Optional[re.Pattern] = field(default=None, init=False, repr=False)
+    _compiled: re.Pattern | None = field(default=None, init=False, repr=False)
 
     def matches(self, ctx: MatchContext) -> bool:
         val = self._extract(ctx)
@@ -44,7 +43,11 @@ class Condition:
         if self.field == MatchField.BODY:
             return ctx.body.decode(errors="replace")
         if self.field == MatchField.HEADER:
-            name = self.value.split(":")[0].strip().lower() if ":" in self.value else self.value.lower()
+            name = (
+                self.value.split(":")[0].strip().lower()
+                if ":" in self.value
+                else self.value.lower()
+            )
             for k, vs in ctx.headers.items():
                 if k.lower() == name:
                     return ", ".join(vs)
@@ -80,9 +83,9 @@ class Rule:
     name: str = ""
     enabled: bool = True
     priority: int = 0
-    conditions: List[Condition] = field(default_factory=list)
+    conditions: list[Condition] = field(default_factory=list)
     action: Action = Action.PASSTHROUGH
-    modifications: List[Modification] = field(default_factory=list)
+    modifications: list[Modification] = field(default_factory=list)
     redirect_url: str = ""
 
     def matches(self, ctx: MatchContext) -> bool:
@@ -129,21 +132,25 @@ class Rule:
             redirect_url=data.get("redirect_url", ""),
         )
         for c in data.get("conditions", []):
-            rule.conditions.append(Condition(
-                field=MatchField(c["field"]),
-                op=c.get("op", "contains"),
-                value=c.get("value", ""),
-                negate=c.get("negate", False),
-            ))
+            rule.conditions.append(
+                Condition(
+                    field=MatchField(c["field"]),
+                    op=c.get("op", "contains"),
+                    value=c.get("value", ""),
+                    negate=c.get("negate", False),
+                )
+            )
         for m in data.get("modifications", []):
-            rule.modifications.append(Modification(
-                target=m["target"],
-                operation=m.get("operation", "set"),
-                key=m.get("key", ""),
-                value=m.get("value", ""),
-                find=m.get("find", ""),
-                replace=m.get("replace", ""),
-            ))
+            rule.modifications.append(
+                Modification(
+                    target=m["target"],
+                    operation=m.get("operation", "set"),
+                    key=m.get("key", ""),
+                    value=m.get("value", ""),
+                    find=m.get("find", ""),
+                    replace=m.get("replace", ""),
+                )
+            )
         return rule
 
 
@@ -152,13 +159,13 @@ class MatchContext:
     method: str
     host: str
     path: str
-    headers: Dict[str, List[str]]
+    headers: dict[str, list[str]]
     body: bytes
 
 
 class RuleManager:
     def __init__(self) -> None:
-        self._rules: List[Rule] = []
+        self._rules: list[Rule] = []
         self._counter = 0
 
     def add(self, rule: Rule) -> Rule:
@@ -178,10 +185,10 @@ class RuleManager:
     def delete(self, rule_id: int) -> None:
         self._rules = [r for r in self._rules if r.id != rule_id]
 
-    def list(self) -> List[Rule]:
+    def list(self) -> list[Rule]:
         return list(self._rules)
 
-    def match(self, ctx: MatchContext) -> Optional[Rule]:
+    def match(self, ctx: MatchContext) -> Rule | None:
         for rule in self._rules:
             if rule.enabled and rule.matches(ctx):
                 return rule

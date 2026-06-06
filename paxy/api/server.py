@@ -1,14 +1,11 @@
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
-from typing import Optional
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
-from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from ..replay.replay import ReplayOptions, replay_many
@@ -26,8 +23,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-_store: Optional[Store] = None
-_rules: Optional[RuleManager] = None
+_store: Store | None = None
+_rules: RuleManager | None = None
 
 
 def init(store: Store, rules: RuleManager) -> None:
@@ -37,6 +34,7 @@ def init(store: Store, rules: RuleManager) -> None:
 
 
 # --- traffic ---
+
 
 @app.get("/api/traffic")
 async def list_traffic(
@@ -50,12 +48,14 @@ async def list_traffic(
     assert _store is not None
     f = Filter(method=method, host=host, search=search, protocol=protocol)
     entries, total = _store.list(f, offset, limit)
-    return JSONResponse({
-        "entries": [e.to_dict() for e in entries],
-        "total": total,
-        "offset": offset,
-        "limit": limit,
-    })
+    return JSONResponse(
+        {
+            "entries": [e.to_dict() for e in entries],
+            "total": total,
+            "offset": offset,
+            "limit": limit,
+        }
+    )
 
 
 @app.get("/api/traffic/{entry_id}")
@@ -68,6 +68,7 @@ async def get_traffic(entry_id: int) -> JSONResponse:
 
 
 # --- rules ---
+
 
 @app.get("/api/rules")
 async def list_rules() -> JSONResponse:
@@ -101,6 +102,7 @@ async def delete_rule(rule_id: int) -> Response:
 
 # --- replay ---
 
+
 class ReplayRequest(BaseModel):
     entry_id: int
     options: dict = {}
@@ -124,6 +126,7 @@ async def replay(req: ReplayRequest) -> JSONResponse:
 
 # --- clear ---
 
+
 @app.post("/api/clear")
 async def clear() -> Response:
     assert _store is not None
@@ -132,6 +135,7 @@ async def clear() -> Response:
 
 
 # --- websocket ---
+
 
 @app.websocket("/ws")
 async def ws_endpoint(websocket: WebSocket) -> None:

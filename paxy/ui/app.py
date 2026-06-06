@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Optional
 
 from nicegui import app as nicegui_app
 from nicegui import ui
@@ -9,7 +8,7 @@ from nicegui import ui
 from ..store.models import Entry, Filter
 from ..store.store import Store
 from .detail import render_detail
-from .theme import apply_dark_theme, method_badge, status_badge, status_color
+from .theme import apply_dark_theme
 
 
 def build_ui(store: Store) -> None:
@@ -30,23 +29,41 @@ def build_ui(store: Store) -> None:
             ui.label("paxy").classes("text-h6 text-weight-bold")
             ui.badge("●", color="positive").props("rounded").tooltip("Proxy running")
 
-            search_input = ui.input(placeholder="Search host/path…").props("dense outlined dark").classes("w-64")
-            method_select = ui.select(
-                ["", "GET", "POST", "PUT", "PATCH", "DELETE"],
-                value="",
-                label="Method",
-            ).props("dense outlined dark").classes("w-28")
-            protocol_select = ui.select(
-                ["", "http", "https", "ws", "grpc"],
-                value="",
-                label="Protocol",
-            ).props("dense outlined dark").classes("w-28")
+            search_input = (
+                ui.input(placeholder="Search host/path…")
+                .props("dense outlined dark")
+                .classes("w-64")
+            )
+            method_select = (
+                ui.select(
+                    ["", "GET", "POST", "PUT", "PATCH", "DELETE"],
+                    value="",
+                    label="Method",
+                )
+                .props("dense outlined dark")
+                .classes("w-28")
+            )
+            protocol_select = (
+                ui.select(
+                    ["", "http", "https", "ws", "grpc"],
+                    value="",
+                    label="Protocol",
+                )
+                .props("dense outlined dark")
+                .classes("w-28")
+            )
 
             ui.space()
-            ui.button("Clear", icon="delete_sweep", on_click=lambda: _clear(store, state, table, detail_container)).props("color=negative size=sm flat")
+            ui.button(
+                "Clear",
+                icon="delete_sweep",
+                on_click=lambda: _clear(store, state, table, detail_container),
+            ).props("color=negative size=sm flat")
 
         # --- layout ---
-        with ui.splitter(value=60).classes("w-full").style("height: calc(100vh - 56px)") as splitter:
+        with (
+            ui.splitter(value=60).classes("w-full").style("height: calc(100vh - 56px)") as splitter
+        ):
             with splitter.before:
                 table = _build_table(state, detail_container_ref=[None])
 
@@ -79,7 +96,12 @@ def build_ui(store: Store) -> None:
         async def _live() -> None:
             try:
                 while True:
-                    await asyncio.wait_for(asyncio.shield(asyncio.get_event_loop().run_in_executor(None, q.get_nowait)), timeout=0.1)
+                    await asyncio.wait_for(
+                        asyncio.shield(
+                            asyncio.get_event_loop().run_in_executor(None, q.get_nowait)
+                        ),
+                        timeout=0.1,
+                    )
             except Exception:
                 pass
 
@@ -103,27 +125,61 @@ def build_ui(store: Store) -> None:
 
 def _build_table(state: dict, detail_container_ref: list) -> ui.table:
     columns = [
-        {"name": "id",       "label": "ID",       "field": "id",       "align": "right", "style": "width:50px"},
-        {"name": "method",   "label": "Method",   "field": "method",   "align": "center","style": "width:80px"},
-        {"name": "host",     "label": "Host",     "field": "host",     "align": "left"},
-        {"name": "path",     "label": "Path",     "field": "path",     "align": "left"},
-        {"name": "status",   "label": "Status",   "field": "status_code","align":"center","style":"width:70px"},
-        {"name": "duration", "label": "ms",       "field": "duration_ms","align":"right","style":"width:60px"},
-        {"name": "protocol", "label": "Proto",    "field": "protocol", "align": "center","style":"width:60px"},
+        {"name": "id", "label": "ID", "field": "id", "align": "right", "style": "width:50px"},
+        {
+            "name": "method",
+            "label": "Method",
+            "field": "method",
+            "align": "center",
+            "style": "width:80px",
+        },
+        {"name": "host", "label": "Host", "field": "host", "align": "left"},
+        {"name": "path", "label": "Path", "field": "path", "align": "left"},
+        {
+            "name": "status",
+            "label": "Status",
+            "field": "status_code",
+            "align": "center",
+            "style": "width:70px",
+        },
+        {
+            "name": "duration",
+            "label": "ms",
+            "field": "duration_ms",
+            "align": "right",
+            "style": "width:60px",
+        },
+        {
+            "name": "protocol",
+            "label": "Proto",
+            "field": "protocol",
+            "align": "center",
+            "style": "width:60px",
+        },
     ]
-    table = ui.table(columns=columns, rows=[], row_key="id").classes("w-full").props("dense flat dark virtual-scroll")
-    table.add_slot("body-cell-method", """
+    table = (
+        ui.table(columns=columns, rows=[], row_key="id")
+        .classes("w-full")
+        .props("dense flat dark virtual-scroll")
+    )
+    table.add_slot(
+        "body-cell-method",
+        """
         <q-td :props="props">
           <q-badge :color="{'GET':'blue','POST':'green','PUT':'orange','PATCH':'purple','DELETE':'red'}[props.value] || 'grey'" :label="props.value" rounded />
         </q-td>
-    """)
-    table.add_slot("body-cell-status", """
+    """,
+    )
+    table.add_slot(
+        "body-cell-status",
+        """
         <q-td :props="props">
           <q-badge v-if="props.value"
             :color="props.value < 300 ? 'positive' : props.value < 400 ? 'info' : props.value < 500 ? 'warning' : 'negative'"
             :label="props.value" rounded />
         </q-td>
-    """)
+    """,
+    )
     return table
 
 

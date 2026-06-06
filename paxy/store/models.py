@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from typing import Dict, List, Optional
+from datetime import UTC, datetime
 
 
 @dataclass
 class Entry:
     id: int = 0
-    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     # Request
     method: str = ""
@@ -16,22 +15,23 @@ class Entry:
     host: str = ""
     path: str = ""
     query: str = ""
-    req_headers: Dict[str, List[str]] = field(default_factory=dict)
+    req_headers: dict[str, list[str]] = field(default_factory=dict)
     req_body: bytes = b""
 
     # Response
     status_code: int = 0
-    resp_headers: Dict[str, List[str]] = field(default_factory=dict)
+    resp_headers: dict[str, list[str]] = field(default_factory=dict)
     resp_body: bytes = b""
     duration_ms: int = 0
 
     # Meta
     protocol: str = "http"
-    tags: List[str] = field(default_factory=list)
+    tags: list[str] = field(default_factory=list)
     modified: bool = False
 
     def to_dict(self) -> dict:
         import base64
+
         return {
             "id": self.id,
             "created_at": self.created_at.isoformat(),
@@ -66,6 +66,4 @@ class Filter:
             return False
         if self.protocol and entry.protocol != self.protocol:
             return False
-        if self.search and self.search.lower() not in (entry.host + entry.path).lower():
-            return False
-        return True
+        return not (self.search and self.search.lower() not in (entry.host + entry.path).lower())

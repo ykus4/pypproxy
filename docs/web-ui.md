@@ -3,155 +3,124 @@
 ## GUI Mode
 
 Start pypproxy in GUI mode (the default) and open `http://localhost:8081`.
-The UI is built with [NiceGUI](https://nicegui.io/) and runs in the same Python process as the proxy.
+
+```bash
+pypproxy            # or
+pypproxy --mode gui
+```
 
 ## Layout
 
 ```
-┌──────────────────────────────────────────────────────────────┐
-│  toolbar: pypproxy ● | Filter expression | Intercept | Clear | ⚙ │
-├─────────────────────────────────────────────────────────────-┤
-│  Traffic | Resender | Bulk Sender | Diff                      │
-├──────────────────────────┬───────────────────────────────────┤
-│  Traffic list            │  Detail panel                     │
-│  (left 60%)              │  (right 40%)                      │
-│  click row to select     │  Request / Response               │
-│  right-click for menu    │  Body view selector               │
-│                          │  Replay button                    │
-└──────────────────────────┴───────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│  sidebar (220px)  │  toolbar: filter | Intercept | Clear | ⚙ ☀  │
+│                   ├──────────────────────────────────────────────┤
+│  Traffic          │                                              │
+│  ─── Tools ───    │  Traffic list (left)  │  Detail panel        │
+│  Resender         │  click row to select  │  Request / Response  │
+│  Bulk Sender      │  right-click for menu │  Body view selector  │
+│  Macro            │                       │  Replay button       │
+│  Diff             │                                              │
+│  A/B Test         │                                              │
+│  ─── Security ─── │                                              │
+│  Security         │                                              │
+│  Adv Security     │                                              │
+│  Scan             │                                              │
+│  ─── Analysis ─── │                                              │
+│  GraphQL          │                                              │
+│  Analytics        │                                              │
+│  OpenAPI          │                                              │
+│  ─── Dev ───      │                                              │
+│  Code Gen         │                                              │
+│  Frida            │                                              │
+│  Sessions         │                                              │
+│  Report           │                                              │
+│  ─── Data ───     │                                              │
+│  Import/Search    │                                              │
+│  Settings (⚙)     │                                              │
+└───────────────────┴──────────────────────────────────────────────┘
 ```
 
-## Tabs
+## Sidebar navigation
 
-### Traffic
+Click any item in the sidebar to switch pages. The active item is highlighted with a blue left border.
 
-The main traffic list. New requests are prepended in real time.
+## Light / Dark mode
+
+Click the **☀ / 🌙 button** in the toolbar to toggle between light and dark mode. The preference is saved to `localStorage` and restored on next visit.
+
+## Traffic list
+
+New requests appear in real time at the top.
 
 | Column | Description |
 |--------|-------------|
-| ID | Sequential capture number |
-| Method | HTTP method (color badge) |
+| # | Sequential capture ID |
+| Method | HTTP method (color pill) |
 | Host | Hostname |
-| Path | Path including query string |
-| Status | HTTP status (color badge) |
+| Path | Path + query string |
+| Status | HTTP status (color pill) |
 | Size | Response body size |
-| ms | Response time in milliseconds |
-| Proto | `http`, `https`, `ws`, `grpc` |
-
-**Row colors** — right-click any row to assign a color for visual grouping.
+| ms | Response time |
 
 **Right-click menu:**
-- Send to Resender
-- Send to Bulk Sender
-- Set as Diff left / Diff with left
-- Set color
 
-### Resender
-
-Edit and re-send any request. Click **+ New** or right-click a traffic row → **Send to Resender**.
-
-- Method + URL bar
-- Headers editor (raw text, one `Key: Value` per line)
-- Body editor
-- Response panel (status, headers, body)
-- HTTP/2 supported automatically
-
-### Bulk Sender
-
-Send many variants of one request concurrently.
-
-**Payload list mode:** Enter one payload per line (JSON or plain text). Each line becomes a separate request body.
-
-**Race condition mode:** Send the same request N times simultaneously to test for race conditions.
-
-Results table shows status code, response time, and errors per request.
-
-### Diff
-
-Compare two captured entries side by side.
-
-1. Right-click entry A → **Set as Diff left**
-2. Right-click entry B → **Diff with left**
-3. Switch to the Diff tab — unified diff is shown for Request, Response, and Headers.
+| Action | Description |
+|--------|-------------|
+| Send to Resender | Open in editor |
+| Send to Bulk Sender | Parallel payload testing |
+| Add to Macro | Append to macro chain |
+| A/B Test | Compare against another host |
+| Generate Code | curl / requests / fetch / HTTPie |
+| Security Check | JWT, header, randomness checks |
+| Adv Security | CORS, SSRF, redirect, rate limit |
+| Active Scan | XSS/SQLi/SSRF/CMDi auto-scan |
+| Frida Hook | Generate and inject Frida script |
+| Add to Session | Assign to active session |
+| Set Diff left / Diff with left | Compare two entries |
+| Set color | Highlight row |
 
 ## Filter expression
 
-The filter bar accepts a structured expression:
-
-```
-field op value
-field op value && field op value
-field op value || field op value
-```
-
-**Fields:** `host`, `path`, `method`, `status`, `protocol`, `request`, `response`, `full_text`
-
-**Operators:** `==` (exact), `!=` (not equal), `contains` (substring), `~` (regex)
-
-**Examples:**
 ```
 host == api.example.com
 method == POST && path contains /login
 status ~ ^[45]
-full_text contains token
+full_text contains Authorization
 ```
+
+**Fields:** `host`, `path`, `method`, `status`, `protocol`, `request`, `response`, `full_text`
+**Operators:** `==`, `!=`, `contains`, `~` (regex)
+**Logic:** `&&`, `||`
 
 ## Body view selector
 
-The detail panel's body section has a view mode dropdown:
-
 | Mode | Description |
 |------|-------------|
-| Auto | Detect from Content-Type (default) |
-| Text | Raw UTF-8 text |
-| JSON | Pretty-printed JSON |
-| Hex | Hex dump with ASCII column |
-| Protobuf | Wire-type heuristic decode (no schema needed) |
+| Auto | Detect from Content-Type |
+| Text | Raw UTF-8 |
+| JSON | Pretty-print |
+| XML/HTML | minidom pretty-print |
+| Hex | Hexdump with ASCII |
+| URL-encoded | `key = value` per line |
+| Multipart | Part-by-part display |
+| Base64 | Decode standard or URL-safe |
+| JWT | Header + payload as JSON |
+| Protobuf | Wire-type heuristic decode |
 | MessagePack | Decoded to JSON |
 | CBOR | Decoded to JSON |
 
 ## Intercept toggle
 
-Enable the **Intercept** toggle in the toolbar to pause every request for manual review.
-
-A dialog appears with the request headers and body. You can edit them before forwarding, or drop the request entirely.
-
-## Settings page
-
-Click ⚙ in the toolbar to open the settings page (`/settings`).
-
-### Rules
-
-Add, enable/disable, and delete intercept rules from the UI.
-
-### SSL Passthrough
-
-Add hosts that should be tunneled without TLS interception (for certificate-pinned apps).
-
-### DNS Overwrite
-
-Configure the built-in DNS server to redirect specific domains to a target IP.
-Start the DNS server and point devices to this machine's IP for DNS.
-
-### Listen Ports
-
-Change the proxy and UI port (takes effect on restart).
-
-### Client Certificates
-
-Import client certificates for mutual TLS. Certificates are matched to hosts by glob pattern.
+Enable the **Intercept** switch in the toolbar to pause every request for manual review.
 
 ## CUI Mode
 
 ```bash
-uv run python main.py --mode cui
+pypproxy --mode cui
 ```
-
-A rich-rendered table updates in real time inside the terminal.
 
 | Key | Action |
 |-----|--------|
 | `q` / `Ctrl+C` | Quit |
 | `c` | Clear traffic |
-
-The REST API remains available at `:8081` in CUI mode.

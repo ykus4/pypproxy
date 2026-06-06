@@ -14,7 +14,7 @@ class ScriptEngine:
         self._module = None
 
     def load_file(self, path: str) -> None:
-        p = Path(path)
+        p = Path(path).resolve()
         spec = importlib.util.spec_from_file_location("paxy_script", p)
         if spec is None or spec.loader is None:
             raise ImportError(f"Cannot load script: {path}")

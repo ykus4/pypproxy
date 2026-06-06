@@ -8,10 +8,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel
 
-from ..replay.replay import ReplayOptions, replay_many
-from ..rule.rule import Rule, RuleManager
-from ..store.models import Filter
-from ..store.store import Store
+from paxy.replay.replay import ReplayOptions, replay_many
+from paxy.rule.rule import Rule, RuleManager
+from paxy.store.models import Filter
+from paxy.store.store import Store
 
 logger = logging.getLogger(__name__)
 

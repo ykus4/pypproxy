@@ -5,8 +5,9 @@ import asyncio
 from nicegui import app as nicegui_app
 from nicegui import ui
 
-from ..store.models import Entry, Filter
-from ..store.store import Store
+from paxy.store.models import Entry, Filter
+from paxy.store.store import Store
+
 from .detail import render_detail
 from .theme import apply_dark_theme
 

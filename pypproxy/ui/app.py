@@ -105,7 +105,7 @@ def build_ui(
                             item_el = ui.element("div").classes("pp-nav-item")
                             with item_el:
                                 ui.html(f'<span class="material-icons pp-nav-icon">{icon}</span>')
-                                ui.element("span").text = label
+                                ui.label(label).style("font-size:13.5px")
 
                             def _nav(pid=page_id, el=item_el) -> None:
                                 state["active_page"] = pid
@@ -130,7 +130,7 @@ def build_ui(
                         ui.html(
                             '<span class="material-icons pp-nav-icon" style="font-size:14px">settings</span>'
                         )
-                        ui.element("span").style("font-size:12px").text = "Settings"
+                        ui.label("Settings").style("font-size:12px")
                     settings_item.on("click", lambda: ui.navigate.to("/settings"))
 
             # ── Main area ─────────────────────────────────────────

@@ -4,8 +4,8 @@ import asyncio
 import logging
 import struct
 
-from ..store.models import Entry
-from ..store.store import Store
+from paxy.store.models import Entry
+from paxy.store.store import Store
 
 logger = logging.getLogger(__name__)
 

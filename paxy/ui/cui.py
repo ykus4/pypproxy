@@ -9,8 +9,8 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from ..store.models import Entry
-from ..store.store import Store
+from paxy.store.models import Entry
+from paxy.store.store import Store
 
 console = Console()
 

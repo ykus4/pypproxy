@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 
 import httpx
 
-from ..store.models import Entry
+from paxy.store.models import Entry
 
 
 @dataclass

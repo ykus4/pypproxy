@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import time
 
-from ..rule.rule import Action, MatchContext, Modification, RuleManager
-from ..store.models import Entry
-from ..store.store import Store
+from paxy.rule.rule import Action, MatchContext, Modification, RuleManager
+from paxy.store.models import Entry
+from paxy.store.store import Store
 
 
 class Interceptor:

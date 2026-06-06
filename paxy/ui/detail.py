@@ -4,7 +4,8 @@ import json
 
 from nicegui import ui
 
-from ..store.models import Entry
+from paxy.store.models import Entry
+
 from .theme import method_badge, status_badge
 
 

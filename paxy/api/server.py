@@ -5,9 +5,11 @@ import logging
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import JSONResponse, PlainTextResponse, Response
 from pydantic import BaseModel
 
+from paxy.bulk.sender import BulkPayload, bulk_send, race_send
+from paxy.exporter.exporter import export_all, export_har, import_rules
 from paxy.replay.replay import ReplayOptions, replay_many
 from paxy.rule.rule import Rule, RuleManager
 from paxy.store.models import Filter
@@ -127,6 +129,65 @@ async def replay(req: ReplayRequest) -> JSONResponse:
     )
     results = await replay_many(entry, opts)
     return JSONResponse([r.to_dict() for r in results])
+
+
+# --- bulk sender ---
+
+
+class BulkRequest(BaseModel):
+    entry_id: int
+    payloads: list[dict] = []
+    count: int = 10
+    concurrency: int = 10
+    mode: str = "payloads"  # "payloads" or "race"
+
+
+@app.post("/api/bulk")
+async def bulk(req: BulkRequest) -> JSONResponse:
+    assert _store is not None
+    entry = _store.get(req.entry_id)
+    if entry is None:
+        raise HTTPException(status_code=404, detail="entry not found")
+    if req.mode == "race":
+        results = await race_send(entry, count=req.count)
+    else:
+        payloads = [
+            BulkPayload(
+                label=p.get("label", f"payload-{i}"),
+                override_body=p.get("body", "").encode() if p.get("body") else b"",
+                override_headers=p.get("headers", {}),
+                override_path=p.get("path", ""),
+            )
+            for i, p in enumerate(req.payloads)
+        ]
+        results = await bulk_send(entry, payloads, concurrency=req.concurrency)
+    return JSONResponse([r.to_dict() for r in results])
+
+
+# --- export / import ---
+
+
+@app.get("/api/export/json")
+async def export_json() -> PlainTextResponse:
+    assert _store is not None and _rules is not None
+    entries, _ = _store.list(Filter(), 0, 0)
+    return PlainTextResponse(export_all(entries, _rules), media_type="application/json")
+
+
+@app.get("/api/export/har")
+async def export_har_endpoint() -> PlainTextResponse:
+    assert _store is not None
+    entries, _ = _store.list(Filter(), 0, 0)
+    return PlainTextResponse(export_har(entries), media_type="application/json")
+
+
+@app.post("/api/import/rules")
+async def import_rules_endpoint(data: dict) -> JSONResponse:
+    assert _rules is not None
+    import json as _json
+
+    count = import_rules(_json.dumps(data.get("rules", data)), _rules)
+    return JSONResponse({"imported": count})
 
 
 # --- clear ---

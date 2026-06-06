@@ -13,13 +13,12 @@ from .theme import apply_dark_theme
 
 
 def build_ui(store: Store) -> None:
-    apply_dark_theme()
-
     @ui.page("/")
     async def index() -> None:
+        apply_dark_theme()
         ui.dark_mode().enable()
 
-        state = {
+        state: dict = {
             "entries": [],
             "selected": None,
             "filter": Filter(),
@@ -36,44 +35,35 @@ def build_ui(store: Store) -> None:
                 .classes("w-64")
             )
             method_select = (
-                ui.select(
-                    ["", "GET", "POST", "PUT", "PATCH", "DELETE"],
-                    value="",
-                    label="Method",
-                )
+                ui.select(["", "GET", "POST", "PUT", "PATCH", "DELETE"], value="", label="Method")
                 .props("dense outlined dark")
                 .classes("w-28")
             )
             protocol_select = (
-                ui.select(
-                    ["", "http", "https", "ws", "grpc"],
-                    value="",
-                    label="Protocol",
-                )
+                ui.select(["", "http", "https", "ws", "grpc"], value="", label="Protocol")
                 .props("dense outlined dark")
                 .classes("w-28")
             )
 
             ui.space()
-            ui.button(
-                "Clear",
-                icon="delete_sweep",
-                on_click=lambda: _clear(store, state, table, detail_container),
-            ).props("color=negative size=sm flat")
+            # clear button — detail_container wired after layout is built
+            clear_btn = ui.button("Clear", icon="delete_sweep").props("color=negative size=sm flat")
 
-        # --- layout ---
+        # --- layout: two-column with splitter ---
         with (
             ui.splitter(value=60).classes("w-full").style("height: calc(100vh - 56px)") as splitter
         ):
-            with splitter.before:
-                table = _build_table(state, detail_container_ref=[None])
+            with splitter.before, ui.column().classes("w-full h-full overflow-auto"):
+                table = _build_table()
 
-            with splitter.after:
-                detail_container = ui.scroll_area().classes("w-full h-full q-pa-sm")
-                render_detail(None, detail_container)
+            with (
+                splitter.after,
+                ui.column().classes("w-full h-full overflow-auto q-pa-sm") as detail_col,
+            ):
+                render_detail(None, detail_col)
 
-        # wire detail_container into table callbacks
-        table._props["detail_container"] = detail_container
+        # wire clear button now that detail_col is defined
+        clear_btn.on("click", lambda: _clear(store, state, table, detail_col))
 
         # --- filter reactivity ---
         def apply_filter() -> None:
@@ -88,23 +78,25 @@ def build_ui(store: Store) -> None:
         method_select.on("update:model-value", lambda: apply_filter())
         protocol_select.on("update:model-value", lambda: apply_filter())
 
+        # row click → show detail
+        async def on_row_click(e) -> None:  # noqa: ANN001
+            entry_id = e.args.get("key") or (
+                e.args[1].get("id") if isinstance(e.args, list) else None
+            )
+            if entry_id is None:
+                return
+            entry = store.get(int(entry_id))
+            if entry:
+                state["selected"] = entry
+                render_detail(entry, detail_col)
+
+        table.on("row-click", on_row_click)
+
         # --- initial load ---
         _refresh_table(store, state, table)
 
-        # --- live updates via store subscription ---
+        # --- live updates ---
         q = store.subscribe()
-
-        async def _live() -> None:
-            try:
-                while True:
-                    await asyncio.wait_for(
-                        asyncio.shield(
-                            asyncio.get_event_loop().run_in_executor(None, q.get_nowait)
-                        ),
-                        timeout=0.1,
-                    )
-            except Exception:
-                pass
 
         async def _poller() -> None:
             try:
@@ -124,7 +116,7 @@ def build_ui(store: Store) -> None:
         asyncio.ensure_future(_poller())
 
 
-def _build_table(state: dict, detail_container_ref: list) -> ui.table:
+def _build_table() -> ui.table:
     columns = [
         {"name": "id", "label": "ID", "field": "id", "align": "right", "style": "width:50px"},
         {
@@ -167,9 +159,11 @@ def _build_table(state: dict, detail_container_ref: list) -> ui.table:
         "body-cell-method",
         """
         <q-td :props="props">
-          <q-badge :color="{'GET':'blue','POST':'green','PUT':'orange','PATCH':'purple','DELETE':'red'}[props.value] || 'grey'" :label="props.value" rounded />
+          <q-badge
+            :color="{'GET':'blue','POST':'green','PUT':'orange','PATCH':'purple','DELETE':'red'}[props.value] || 'grey'"
+            :label="props.value" rounded />
         </q-td>
-    """,
+        """,
     )
     table.add_slot(
         "body-cell-status",
@@ -179,7 +173,7 @@ def _build_table(state: dict, detail_container_ref: list) -> ui.table:
             :color="props.value < 300 ? 'positive' : props.value < 400 ? 'info' : props.value < 500 ? 'warning' : 'negative'"
             :label="props.value" rounded />
         </q-td>
-    """,
+        """,
     )
     return table
 
@@ -204,16 +198,14 @@ def _entry_to_row(e: Entry) -> dict:
         "status_code": e.status_code,
         "duration_ms": e.duration_ms,
         "protocol": e.protocol,
-        "_tags": e.tags,
-        "_modified": e.modified,
     }
 
 
-async def _clear(store: Store, state: dict, table: ui.table, detail_container: ui.element) -> None:
+async def _clear(store: Store, state: dict, table: ui.table, detail_col: ui.element) -> None:
     store.clear()
     state["entries"] = []
     state["selected"] = None
     table.rows = []
     table.update()
-    render_detail(None, detail_container)
+    render_detail(None, detail_col)
     ui.notify("Cleared", type="info")

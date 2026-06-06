@@ -8,7 +8,7 @@
 ## Installation
 
 ```bash
-git clone https://github.com/ykus4/paxy
+git clone https://github.com/ykus4/pypproxy
 cd paxy
 uv sync
 ```

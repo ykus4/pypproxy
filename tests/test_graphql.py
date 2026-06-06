@@ -2,22 +2,22 @@ from __future__ import annotations
 
 import json
 
-from paxy.graphql.detector import (
+from pypproxy.graphql.detector import (
     extract_field_names,
     extract_operation_name,
     extract_operation_type,
     is_graphql,
     parse_operation,
 )
-from paxy.graphql.modifier import (
+from pypproxy.graphql.modifier import (
     add_introspection_field,
     build_mutation,
     build_query,
     set_variable,
     strip_operation_name,
 )
-from paxy.graphql.schema_store import SchemaStore
-from paxy.store.models import Entry
+from pypproxy.graphql.schema_store import SchemaStore
+from pypproxy.store.models import Entry
 
 
 def make_gql_entry(query: str, variables: dict | None = None, method: str = "POST") -> Entry:
@@ -171,7 +171,7 @@ def test_add_introspection_field():
 
 
 def test_schema_store_set_get():
-    from paxy.graphql.introspection import GraphQLSchema
+    from pypproxy.graphql.introspection import GraphQLSchema
 
     store = SchemaStore()
     schema = GraphQLSchema(query_type="Query")
@@ -181,7 +181,7 @@ def test_schema_store_set_get():
 
 
 def test_schema_store_delete():
-    from paxy.graphql.introspection import GraphQLSchema
+    from pypproxy.graphql.introspection import GraphQLSchema
 
     store = SchemaStore()
     store.set("host.com", GraphQLSchema())
@@ -190,7 +190,7 @@ def test_schema_store_delete():
 
 
 def test_schema_store_list_hosts():
-    from paxy.graphql.introspection import GraphQLSchema
+    from pypproxy.graphql.introspection import GraphQLSchema
 
     store = SchemaStore()
     store.set("a.com", GraphQLSchema())
@@ -204,9 +204,9 @@ def test_schema_store_list_hosts():
 
 
 def test_interceptor_tags_graphql():
-    from paxy.interceptor.interceptor import Interceptor
-    from paxy.rule.rule import RuleManager
-    from paxy.store.store import Store
+    from pypproxy.interceptor.interceptor import Interceptor
+    from pypproxy.rule.rule import RuleManager
+    from pypproxy.store.store import Store
 
     st = Store()
     rules = RuleManager()
@@ -229,9 +229,9 @@ def test_interceptor_tags_graphql():
 
 
 def test_interceptor_mutation_tagged():
-    from paxy.interceptor.interceptor import Interceptor
-    from paxy.rule.rule import RuleManager
-    from paxy.store.store import Store
+    from pypproxy.interceptor.interceptor import Interceptor
+    from pypproxy.rule.rule import RuleManager
+    from pypproxy.store.store import Store
 
     st = Store()
     ic = Interceptor(RuleManager(), st)

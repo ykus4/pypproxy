@@ -4,10 +4,10 @@ import json
 
 import pytest
 
-from paxy.exporter.importer import import_har, import_json
-from paxy.store.models import Entry
-from paxy.store.scope import ScopeManager, ScopeRule
-from paxy.store.store import Store
+from pypproxy.exporter.importer import import_har, import_json
+from pypproxy.store.models import Entry
+from pypproxy.store.scope import ScopeManager, ScopeRule
+from pypproxy.store.store import Store
 
 # ---- HAR importer ----
 
@@ -47,7 +47,7 @@ def _make_har_entry(
 
 
 def test_import_har_basic():
-    from paxy.store.models import Filter
+    from pypproxy.store.models import Filter
 
     store = Store()
     har = _make_har([_make_har_entry(), _make_har_entry("https://other.com/api")])
@@ -193,7 +193,7 @@ def test_scope_disabled_rule():
 
 
 def test_scanner_payloads_non_empty():
-    from paxy.scan.scanner import ALL_PAYLOADS
+    from pypproxy.scan.scanner import ALL_PAYLOADS
 
     assert "xss" in ALL_PAYLOADS
     assert "sqli" in ALL_PAYLOADS
@@ -202,7 +202,7 @@ def test_scanner_payloads_non_empty():
 
 
 def test_scanner_extract_params_query():
-    from paxy.scan.scanner import _extract_params
+    from pypproxy.scan.scanner import _extract_params
 
     e = Entry(
         method="GET",
@@ -219,7 +219,7 @@ def test_scanner_extract_params_query():
 
 
 def test_scanner_extract_params_json_body():
-    from paxy.scan.scanner import _extract_params
+    from pypproxy.scan.scanner import _extract_params
 
     e = Entry(method="POST", scheme="https", host="example.com", path="/api", protocol="https")
     e.id = 2
@@ -229,7 +229,7 @@ def test_scanner_extract_params_json_body():
 
 
 def test_scanner_apply_payload_query():
-    from paxy.scan.scanner import _apply_payload
+    from pypproxy.scan.scanner import _apply_payload
 
     e = Entry(
         method="GET",
@@ -248,7 +248,7 @@ def test_scanner_apply_payload_query():
 
 
 def test_ws_intercept_disabled_passthrough():
-    from paxy.proto.ws_intercept import WSInterceptManager
+    from pypproxy.proto.ws_intercept import WSInterceptManager
 
     mgr = WSInterceptManager()
     assert not mgr.enabled
@@ -256,7 +256,7 @@ def test_ws_intercept_disabled_passthrough():
 
 @pytest.mark.asyncio
 async def test_ws_intercept_passthrough_when_disabled():
-    from paxy.proto.ws_intercept import WSFrame, WSInterceptManager
+    from pypproxy.proto.ws_intercept import WSFrame, WSInterceptManager
 
     mgr = WSInterceptManager()
     frame = WSFrame(direction="client", opcode=1, payload=b"hello", entry_id=1)
@@ -268,7 +268,7 @@ async def test_ws_intercept_passthrough_when_disabled():
 async def test_ws_intercept_forward():
     import asyncio
 
-    from paxy.proto.ws_intercept import WSFrame, WSInterceptManager
+    from pypproxy.proto.ws_intercept import WSFrame, WSInterceptManager
 
     mgr = WSInterceptManager()
     mgr.set_enabled(True)

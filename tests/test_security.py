@@ -3,15 +3,15 @@ from __future__ import annotations
 import base64
 import json
 
-from paxy.security.header_checker import check_security_headers
-from paxy.security.jwt_checker import (
+from pypproxy.security.header_checker import check_security_headers
+from pypproxy.security.jwt_checker import (
     _parse_jwt,
     extract_jwt_from_headers,
     generate_test_tokens,
 )
-from paxy.security.plugin import PluginManager
-from paxy.security.randomness import analyse_token
-from paxy.store.models import Entry
+from pypproxy.security.plugin import PluginManager
+from pypproxy.security.randomness import analyse_token
+from pypproxy.store.models import Entry
 
 # ---- helpers ----
 
@@ -186,7 +186,7 @@ def test_plugin_manager_empty():
 def test_plugin_manager_load_file(tmp_path):
     plugin_file = tmp_path / "test_plugin.py"
     plugin_file.write_text("""
-from paxy.security.plugin import PluginBase
+from pypproxy.security.plugin import PluginBase
 
 class MyPlugin(PluginBase):
     name = "test-plugin"
@@ -210,7 +210,7 @@ def test_plugin_manager_on_request_passthrough():
 def test_plugin_run_on_request(tmp_path):
     plugin_file = tmp_path / "modifier.py"
     plugin_file.write_text("""
-from paxy.security.plugin import PluginBase
+from pypproxy.security.plugin import PluginBase
 
 class Modifier(PluginBase):
     name = "modifier"
@@ -229,7 +229,7 @@ class Modifier(PluginBase):
 def test_plugin_unload(tmp_path):
     plugin_file = tmp_path / "unload_plugin.py"
     plugin_file.write_text("""
-from paxy.security.plugin import PluginBase
+from pypproxy.security.plugin import PluginBase
 class P(PluginBase):
     name = "to-unload"
 """)

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from paxy.cert.ca import CA
-from paxy.cert.client_cert import ClientCert, ClientCertManager
+from pypproxy.cert.ca import CA
+from pypproxy.cert.client_cert import ClientCert, ClientCertManager
 
 
 def test_ca_generate_and_reload(tmp_path):

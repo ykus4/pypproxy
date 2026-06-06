@@ -3,7 +3,7 @@ from __future__ import annotations
 import gzip
 import json
 
-from paxy.codec import (
+from pypproxy.codec import (
     decode_body,
     decode_cbor,
     decode_msgpack,

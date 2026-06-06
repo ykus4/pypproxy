@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from paxy.store.filter_parser import FilterExpression
-from paxy.store.models import Entry
+from pypproxy.store.filter_parser import FilterExpression
+from pypproxy.store.models import Entry
 
 
 def make_entry(**kwargs) -> Entry:

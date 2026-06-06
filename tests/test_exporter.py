@@ -3,15 +3,15 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 
-from paxy.exporter.exporter import (
+from pypproxy.exporter.exporter import (
     export_all,
     export_entries,
     export_har,
     export_rules,
     import_rules,
 )
-from paxy.rule.rule import Action, Condition, MatchField, Rule, RuleManager
-from paxy.store.models import Entry
+from pypproxy.rule.rule import Action, Condition, MatchField, Rule, RuleManager
+from pypproxy.store.models import Entry
 
 
 def make_entry(**kwargs) -> Entry:

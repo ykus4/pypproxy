@@ -5,22 +5,22 @@ import asyncio
 import logging
 from pathlib import Path
 
-from paxy.cert.ca import CA
-from paxy.cert.client_cert import ClientCertManager
-from paxy.config.config import Config
-from paxy.intercept.manager import InterceptManager
-from paxy.interceptor.interceptor import Interceptor
-from paxy.proxy.proxy import Proxy
-from paxy.rule.rule import RuleManager
-from paxy.script.engine import ScriptEngine
-from paxy.store.scope import ScopeManager
-from paxy.store.store import Store
+from pypproxy.cert.ca import CA
+from pypproxy.cert.client_cert import ClientCertManager
+from pypproxy.config.config import Config
+from pypproxy.intercept.manager import InterceptManager
+from pypproxy.interceptor.interceptor import Interceptor
+from pypproxy.proxy.proxy import Proxy
+from pypproxy.rule.rule import RuleManager
+from pypproxy.script.engine import ScriptEngine
+from pypproxy.store.scope import ScopeManager
+from pypproxy.store.store import Store
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
 )
-logger = logging.getLogger("paxy")
+logger = logging.getLogger("pypproxy")
 
 
 def parse_args() -> argparse.Namespace:
@@ -79,7 +79,7 @@ def _build_core(
     key_path = cfg.ca.key_path or str(ca_dir / "ca-key.pem")
     ca = CA.load_or_create(cert_path, key_path)
 
-    db_path = str(ca_dir / "paxy.db") if not args.no_db else ""
+    db_path = str(ca_dir / "pypproxy.db") if not args.no_db else ""
 
     store = Store()
     rules = RuleManager()
@@ -103,7 +103,7 @@ def _build_core(
         intercept_manager=intercept_mgr,
     )
 
-    print("paxy MITM proxy")
+    print("pypproxy MITM proxy")
     print(f"  proxy : {cfg.proxy.addr}:{cfg.proxy.port}")
     print(f"  UI    : http://{cfg.ui.addr}:{cfg.ui.port}")
     print(f"  CA    : {cert_path}")
@@ -117,7 +117,7 @@ def _build_core(
 async def _init_db(store: Store, db_path: str) -> None:
     if not db_path:
         return
-    from paxy.store.db import Database
+    from pypproxy.store.db import Database
 
     db = Database(db_path)
     await db.open()
@@ -130,9 +130,9 @@ def run_gui(args: argparse.Namespace) -> None:
     from nicegui import app as nicegui_app
     from nicegui import ui
 
-    from paxy.api.server import init as api_init
-    from paxy.api.server import init_graphql, register_routes
-    from paxy.ui.app import build_ui
+    from pypproxy.api.server import init as api_init
+    from pypproxy.api.server import init_graphql, register_routes
+    from pypproxy.ui.app import build_ui
 
     cfg, proxy, store, rules, intercept_mgr, db_path, cert_mgr, scope_mgr = _build_core(args)
     api_init(store, rules, scope_mgr)
@@ -161,7 +161,7 @@ def run_gui(args: argparse.Namespace) -> None:
     ui.run(
         host=cfg.ui.addr,
         port=cfg.ui.port,
-        title="paxy",
+        title="pypproxy",
         dark=True,
         reload=False,
         show=False,
@@ -171,9 +171,9 @@ def run_gui(args: argparse.Namespace) -> None:
 def run_cui(args: argparse.Namespace) -> None:
     import uvicorn
 
-    from paxy.api.server import app as api_app
-    from paxy.api.server import init as api_init
-    from paxy.ui.cui import run_cui as _run_cui
+    from pypproxy.api.server import app as api_app
+    from pypproxy.api.server import init as api_init
+    from pypproxy.ui.cui import run_cui as _run_cui
 
     cfg, proxy, store, rules, intercept_mgr, db_path, cert_mgr, scope_mgr = _build_core(args)
     api_init(store, rules, scope_mgr)

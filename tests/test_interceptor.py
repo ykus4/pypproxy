@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import time
 
-from paxy.interceptor.interceptor import Interceptor
-from paxy.rule.rule import Action, Condition, MatchField, Modification, Rule, RuleManager
-from paxy.store.store import Store
+from pypproxy.interceptor.interceptor import Interceptor
+from pypproxy.rule.rule import Action, Condition, MatchField, Modification, Rule, RuleManager
+from pypproxy.store.store import Store
 
 
 def make_interceptor() -> tuple[Interceptor, Store, RuleManager]:

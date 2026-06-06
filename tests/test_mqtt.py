@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import struct
 
-from paxy.proto.mqtt import decode_frames, is_mqtt
+from pypproxy.proto.mqtt import decode_frames, is_mqtt
 
 
 def _make_connect_packet() -> bytes:

@@ -1,5 +1,5 @@
 [project]
-name = "paxy"
+name = "pypproxy"
 version = "0.1.0"
 description = "MITM HTTP/HTTPS proxy for inspecting and modifying traffic"
 requires-python = ">=3.11"
@@ -20,11 +20,14 @@ dependencies = [
 ]
 
 [project.scripts]
-paxy = "main:main"
+pypproxy = "main:main"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["pypproxy"]
 
 [dependency-groups]
 dev = [
@@ -55,7 +58,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["paxy"]
+known-first-party = ["paxy", "pypproxy"]
 
 [tool.ruff.format]
 quote-style = "double"

@@ -4,8 +4,8 @@ import asyncio
 
 import pytest
 
-from paxy.store.models import Entry, Filter
-from paxy.store.store import Store
+from pypproxy.store.models import Entry, Filter
+from pypproxy.store.store import Store
 
 
 def make_entry(**kwargs) -> Entry:

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from paxy.rule.rule import (
+from pypproxy.rule.rule import (
     Action,
     Condition,
     MatchContext,

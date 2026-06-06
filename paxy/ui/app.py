@@ -78,6 +78,8 @@ def build_ui(
             bulk_tab = ui.tab("Bulk Sender", icon="dynamic_feed")
             diff_tab = ui.tab("Diff", icon="difference")
             security_tab = ui.tab("Security", icon="security")
+            scan_tab = ui.tab("Scan", icon="search")
+            import_tab_btn = ui.tab("Import/Search", icon="upload")
 
         with (
             ui.tab_panels(tabs, value=traffic_tab)
@@ -119,6 +121,16 @@ def build_ui(
                 from .security_tab import build_security_tab
 
                 sec_state = build_security_tab(store)
+
+            with ui.tab_panel(scan_tab).classes("p-0 h-full"):
+                from .scan_tab import build_scan_tab
+
+                scan_state = build_scan_tab(store)
+
+            with ui.tab_panel(import_tab_btn).classes("p-0 h-full"):
+                from .import_tab import build_import_tab
+
+                build_import_tab(store)
 
         clear_btn.on("click", lambda: _clear(store, state, table, detail_col))
 
@@ -166,6 +178,10 @@ def build_ui(
                 ui.menu_item(
                     "Security check",
                     on_click=lambda: (sec_state["open_entry"](entry), tabs.set_value(security_tab)),
+                )
+                ui.menu_item(
+                    "Active Scan",
+                    on_click=lambda: (scan_state["open_entry"](entry), tabs.set_value(scan_tab)),
                 )
                 ui.menu_item(
                     "Set as Diff left",

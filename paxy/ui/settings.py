@@ -13,6 +13,7 @@ def build_settings_page(
     rules: RuleManager,
     cert_mgr: ClientCertManager,
     dns_server: DNSServer | None = None,
+    scope_mgr=None,
 ) -> None:
     @ui.page("/settings")
     async def settings() -> None:
@@ -24,6 +25,7 @@ def build_settings_page(
 
         with ui.tabs().props("dense dark").classes("bg-dark") as tabs:
             rules_tab = ui.tab("Rules", icon="rule")
+            scope_tab = ui.tab("Scope", icon="target")
             passthrough_tab = ui.tab("SSL Passthrough", icon="lock_open")
             dns_tab = ui.tab("DNS Overwrite", icon="dns")
             ports_tab = ui.tab("Listen Ports", icon="router")
@@ -37,6 +39,10 @@ def build_settings_page(
             # --- Rules tab ---
             with ui.tab_panel(rules_tab).classes("q-pa-md"):
                 _build_rules_panel(rules)
+
+            # --- Scope tab ---
+            with ui.tab_panel(scope_tab).classes("q-pa-md"):
+                _build_scope_panel(scope_mgr)
 
             # --- SSL Passthrough tab ---
             with ui.tab_panel(passthrough_tab).classes("q-pa-md"):
@@ -53,6 +59,62 @@ def build_settings_page(
             # --- Client Certs tab ---
             with ui.tab_panel(certs_tab).classes("q-pa-md"):
                 _build_certs_panel(cert_mgr)
+
+
+def _build_scope_panel(scope_mgr) -> None:  # noqa: ANN001
+    from paxy.store.scope import ScopeRule
+
+    ui.label("Scope").classes("text-subtitle1 q-mb-sm")
+    ui.label(
+        "When enabled, only in-scope hosts are captured. All others are proxied without recording."
+    ).classes("text-caption text-grey q-mb-md")
+
+    if scope_mgr is None:
+        ui.label("Scope manager not initialized.").classes("text-grey")
+        return
+
+    enabled_toggle = ui.switch("Enable scope filtering", value=scope_mgr.enabled).props(
+        "dense dark color=primary"
+    )
+    enabled_toggle.on("update:model-value", lambda e: scope_mgr.set_enabled(e.args))
+
+    ui.separator().classes("q-my-md")
+    container = ui.column().classes("w-full")
+
+    def _refresh() -> None:
+        container.clear()
+        with container:
+            for rule in scope_mgr.list():
+                with ui.row().classes("items-center gap-2"):
+                    ui.badge(rule.mode, color="grey-7")
+                    ui.label(rule.pattern).classes("flex-1 font-mono")
+                    ui.button(
+                        icon="remove",
+                        on_click=lambda p=rule.pattern: (scope_mgr.remove(p), _refresh()),
+                    ).props("flat dense color=negative size=sm")
+
+    _refresh()
+
+    with ui.row().classes("gap-2 items-center q-mt-sm"):
+        pattern_input = (
+            ui.input(label="Pattern (e.g. *.example.com)")
+            .props("dense outlined dark")
+            .classes("w-64")
+        )
+        mode_select = (
+            ui.select(["glob", "regex"], value="glob", label="Mode")
+            .props("dense outlined dark")
+            .classes("w-24")
+        )
+
+        def _add() -> None:
+            p = pattern_input.value.strip()
+            if p:
+                scope_mgr.add(ScopeRule(pattern=p, mode=mode_select.value))
+                pattern_input.value = ""
+                _refresh()
+
+        ui.button("Add", icon="add", on_click=_add).props("color=primary size=sm")
 
 
 def _build_rules_panel(rules: RuleManager) -> None:

@@ -33,6 +33,11 @@ def init(store: Store, rules: RuleManager) -> None:
     _rules = rules
 
 
+def register_routes(target_app: FastAPI) -> None:
+    """Include all API routes into another FastAPI/NiceGUI app (for GUI mode)."""
+    target_app.include_router(app.router)
+
+
 # --- traffic ---
 
 

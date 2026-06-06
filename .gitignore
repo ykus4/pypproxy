@@ -1,0 +1,23 @@
+# Go
+bin/
+*.exe
+*.test
+*.out
+vendor/
+
+# Node
+web/node_modules/
+web/dist/
+
+# paxy runtime
+.paxy/
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+site/

@@ -4,7 +4,7 @@ layout: home
 hero:
   name: pypproxy
   text: MITM Proxy
-  tagline: Intercept, inspect, and modify HTTP/HTTPS traffic from browsers and mobile apps. Written in Python.
+  tagline: Intercept, inspect, modify, and test HTTP/HTTPS traffic from browsers and mobile apps. Written in Python.
   actions:
     - theme: brand
       text: Get Started
@@ -16,20 +16,26 @@ hero:
 features:
   - icon: 🔐
     title: HTTPS Interception
-    details: Dynamically generate per-host certificates signed by a local CA. Terminate TLS and read every request and response in plain text.
+    details: Dynamically generate per-host certificates. Decrypt and read every request and response including HTTPS.
   - icon: 🖥️
-    title: GUI Mode
-    details: Browser-based UI built with NiceGUI. Traffic streams in real time. Filter, inspect, and replay without leaving the page.
-  - icon: ⌨️
-    title: CUI Mode
-    details: Terminal UI built with rich. Works over SSH and in CI environments with no browser required.
+    title: Modern UI
+    details: Sidebar navigation with dark/light mode toggle. Real-time traffic list, filter expressions, multi-format body decode.
   - icon: ⚙️
     title: Rule Engine
-    details: Block, modify, or redirect traffic by matching host, path, method, header, or body. Full regex support.
-  - icon: 📝
-    title: Python Scripting
-    details: Define on_request / on_response hooks in plain Python. No DSL to learn — the full standard library is available.
+    details: Block, modify, or redirect traffic by host, path, method, header, or body. Full regex support.
   - icon: 🔄
     title: Replay & Fuzzing
-    details: Resend any captured request with one click. Increase count to fire hundreds of parallel requests for load testing or fuzzing.
+    details: One-click replay. Resender with full editor. Bulk Sender for parallel payloads. Macro runner for chained requests.
+  - icon: 🔬
+    title: Security Testing
+    details: JWT checker, CORS/SSRF/redirect/IDOR checks, active scan (XSS/SQLi/CMDi), security header audit.
+  - icon: 📱
+    title: Frida Integration
+    details: SSL pinning bypass scripts for iOS and Android. One-click script injection with real-time console output.
+  - icon: 📊
+    title: Analytics & Reports
+    details: Per-host stats, P95/P99 latency. Export HTML/Markdown reports. OpenAPI spec auto-generation.
+  - icon: 🔌
+    title: Protocol Support
+    details: HTTP/2, WebSocket, gRPC, MQTT, GraphQL — all intercepted and decoded. Protobuf/MessagePack/CBOR support.
 ---

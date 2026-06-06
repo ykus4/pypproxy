@@ -1,6 +1,6 @@
 # Configuration
 
-paxy can be configured via CLI flags or a YAML file. CLI flags take precedence over the config file.
+pypproxy can be configured via CLI flags or a YAML file. CLI flags take precedence over the config file.
 
 ## YAML config file
 

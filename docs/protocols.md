@@ -2,7 +2,7 @@
 
 ## GraphQL
 
-paxy automatically detects GraphQL requests and provides dedicated tooling.
+pypproxy automatically detects GraphQL requests and provides dedicated tooling.
 
 ### Detection
 
@@ -41,7 +41,7 @@ Shows the operation type (query/mutation/subscription), operation name, and top-
 | `DELETE /api/graphql/schema/{host}` | Remove cached schema |
 | `POST /api/graphql/replay` | Re-send with modified query/variables |
 
-### Modifier utilities (`paxy.graphql.modifier`)
+### Modifier utilities (pypproxy.graphql.modifier)
 
 ```python
 from pypproxy.graphql.modifier import set_variable, build_query, build_mutation
@@ -78,7 +78,7 @@ Enable `WSInterceptManager` to pause individual frames for manual review, simila
 ## gRPC
 
 gRPC uses HTTP/2 over TLS with a 5-byte length-prefix framing.
-paxy detects it via the `Content-Type: application/grpc` header.
+pypproxy detects it via the `Content-Type: application/grpc` header.
 
 The body view selector in the detail panel offers **Protobuf** mode for wire-type heuristic decoding (no schema needed).
 

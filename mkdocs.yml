@@ -1,5 +1,5 @@
-site_name: paxy
-site_description: MITM HTTP/HTTPS proxy for inspecting and modifying traffic
+site_name: pypproxy
+site_description: MITM HTTP/HTTPS proxy for inspecting, modifying, and testing traffic
 site_url: https://ykus4.github.io/pypproxy/
 repo_url: https://github.com/ykus4/pypproxy
 repo_name: ykus4/pypproxy

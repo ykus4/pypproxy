@@ -82,6 +82,7 @@ def build_ui(
             scan_tab = ui.tab("Scan", icon="search")
             graphql_tab = ui.tab("GraphQL", icon="account_tree")
             codegen_tab = ui.tab("Code Gen", icon="code")
+            frida_tab = ui.tab("Frida", icon="bug_report")
             openapi_tab_btn = ui.tab("OpenAPI", icon="description")
             analytics_tab_btn = ui.tab("Analytics", icon="bar_chart")
             import_tab_btn = ui.tab("Import/Search", icon="upload")
@@ -157,6 +158,11 @@ def build_ui(
 
                 build_analytics_tab(store)
 
+            with ui.tab_panel(frida_tab).classes("p-0 h-full"):
+                from .frida_tab import build_frida_tab
+
+                frida_state = build_frida_tab(store)
+
             with ui.tab_panel(import_tab_btn).classes("p-0 h-full"):
                 from .import_tab import build_import_tab
 
@@ -215,6 +221,10 @@ def build_ui(
                         advsec_state["open_entry"](entry),
                         tabs.set_value(advsec_tab),
                     ),
+                )
+                ui.menu_item(
+                    "Frida Hook",
+                    on_click=lambda: (frida_state["open_entry"](entry), tabs.set_value(frida_tab)),
                 )
                 ui.menu_item(
                     "Active Scan",

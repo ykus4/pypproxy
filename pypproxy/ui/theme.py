@@ -67,7 +67,7 @@ def apply_dark_theme() -> None:
 
       /* ---- Sidebar ---- */
       .pp-sidebar {{
-        width: 200px; min-width: 200px;
+        width: 220px; min-width: 220px;
         background: var(--pp-surface);
         border-right: 1px solid var(--pp-border);
         display: flex; flex-direction: column;
@@ -89,17 +89,18 @@ def apply_dark_theme() -> None:
         padding: 14px 0 4px;
       }}
       .pp-nav-section-label {{
-        font-size: 9.5px; font-weight: 700;
+        font-size: 10px; font-weight: 700;
         color: var(--pp-muted); text-transform: uppercase;
-        letter-spacing: 0.1em; padding: 0 18px 5px;
+        letter-spacing: 0.08em; padding: 0 16px 5px;
       }}
       .pp-nav-item {{
-        display: flex; align-items: center; gap: 9px;
-        padding: 7px 18px; cursor: pointer;
-        color: var(--pp-muted); font-size: 13px;
+        display: flex; align-items: center; gap: 10px;
+        padding: 8px 16px; cursor: pointer;
+        color: var(--pp-muted); font-size: 13.5px; font-weight: 400;
         border-left: 2px solid transparent;
         transition: all 0.12s;
         user-select: none;
+        white-space: nowrap;
       }}
       .pp-nav-item:hover {{
         background: var(--pp-surface2); color: var(--pp-text);
@@ -108,10 +109,14 @@ def apply_dark_theme() -> None:
         background: rgba(59,130,246,0.1);
         color: var(--pp-accent);
         border-left-color: var(--pp-accent);
+        font-weight: 500;
       }}
       .pp-nav-icon {{
-        font-size: 15px; width: 16px; text-align: center; flex-shrink: 0;
+        font-size: 18px; width: 20px; text-align: center; flex-shrink: 0;
+        opacity: 0.75;
       }}
+      .pp-nav-item.active .pp-nav-icon {{ opacity: 1; }}
+      .pp-nav-item:hover .pp-nav-icon {{ opacity: 1; }}
 
       /* ---- Toolbar ---- */
       .pp-toolbar {{

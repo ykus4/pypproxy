@@ -5,14 +5,19 @@ import asyncio
 from nicegui import app as nicegui_app
 from nicegui import ui
 
+from paxy.intercept.manager import InterceptManager
 from paxy.store.models import Entry, Filter
 from paxy.store.store import Store
 
 from .detail import render_detail
+from .intercept_dialog import build_intercept_panel
 from .theme import apply_dark_theme
 
+_ROW_COLORS = ["", "#b71c1c", "#1b5e20", "#0d47a1", "#f57f17", "#4a148c"]
+_COLOR_LABELS = ["None", "Red", "Green", "Blue", "Yellow", "Purple"]
 
-def build_ui(store: Store) -> None:
+
+def build_ui(store: Store, intercept_mgr: InterceptManager | None = None) -> None:
     @ui.page("/")
     async def index() -> None:
         apply_dark_theme()
@@ -29,27 +34,31 @@ def build_ui(store: Store) -> None:
             ui.label("paxy").classes("text-h6 text-weight-bold")
             ui.badge("●", color="positive").props("rounded").tooltip("Proxy running")
 
-            search_input = (
-                ui.input(placeholder="Search host/path…")
+            filter_input = (
+                ui.input(placeholder="Filter: host == example.com && method == POST")
                 .props("dense outlined dark")
-                .classes("w-64")
-            )
-            method_select = (
-                ui.select(["", "GET", "POST", "PUT", "PATCH", "DELETE"], value="", label="Method")
-                .props("dense outlined dark")
-                .classes("w-28")
-            )
-            protocol_select = (
-                ui.select(["", "http", "https", "ws", "grpc"], value="", label="Protocol")
-                .props("dense outlined dark")
-                .classes("w-28")
+                .classes("w-96")
+                .tooltip(
+                    "Supports: host, path, method, status, protocol, request, response, full_text  Ops: == != contains ~  Logic: && ||"
+                )
             )
 
             ui.space()
-            # clear button — detail_container wired after layout is built
+
+            if intercept_mgr is not None:
+                intercept_toggle = (
+                    ui.switch("Intercept")
+                    .props("dense dark color=warning")
+                    .tooltip("Pause requests for manual review")
+                )
+                intercept_toggle.on(
+                    "update:model-value",
+                    lambda e: intercept_mgr.set_enabled(e.args),
+                )
+
             clear_btn = ui.button("Clear", icon="delete_sweep").props("color=negative size=sm flat")
 
-        # --- layout: two-column with splitter ---
+        # --- layout ---
         with (
             ui.splitter(value=60).classes("w-full").style("height: calc(100vh - 56px)") as splitter
         ):
@@ -62,24 +71,17 @@ def build_ui(store: Store) -> None:
             ):
                 render_detail(None, detail_col)
 
-        # wire clear button now that detail_col is defined
         clear_btn.on("click", lambda: _clear(store, state, table, detail_col))
 
-        # --- filter reactivity ---
+        # --- filter ---
         def apply_filter() -> None:
-            state["filter"] = Filter(
-                search=search_input.value or "",
-                method=method_select.value or "",
-                protocol=protocol_select.value or "",
-            )
+            expr = filter_input.value or ""
+            state["filter"] = Filter(expression=expr)
             _refresh_table(store, state, table)
 
-        search_input.on("update:model-value", lambda: apply_filter())
-        method_select.on("update:model-value", lambda: apply_filter())
-        protocol_select.on("update:model-value", lambda: apply_filter())
+        filter_input.on("update:model-value", lambda: apply_filter())
 
-        # row click → show detail
-        # NiceGUI 3.x: e.args is [event, row_dict, row_index]
+        # --- row click → detail ---
         async def on_row_click(e) -> None:  # noqa: ANN001
             try:
                 row = e.args[1] if isinstance(e.args, list) else e.args
@@ -93,6 +95,36 @@ def build_ui(store: Store) -> None:
 
         table.on("row-click", on_row_click)
 
+        # --- row right-click → color menu ---
+        async def on_row_contextmenu(e) -> None:  # noqa: ANN001
+            try:
+                row = e.args[1] if isinstance(e.args, list) else e.args
+                entry_id = int(row["id"])
+            except (IndexError, KeyError, TypeError, ValueError):
+                return
+            with ui.menu() as menu:
+                ui.label("Set color").classes("q-px-sm text-caption text-grey")
+                for color, label in zip(_ROW_COLORS, _COLOR_LABELS, strict=False):
+
+                    def _set(c=color, eid=entry_id) -> None:
+                        store.set_color(eid, c)
+                        _refresh_table(store, state, table)
+                        menu.close()
+
+                    with ui.menu_item(on_click=_set), ui.row().classes("items-center gap-2"):
+                        if color:
+                            ui.element("div").style(
+                                f"width:12px;height:12px;border-radius:2px;background:{color}"
+                            )
+                        ui.label(label)
+            menu.open()
+
+        table.on("row-contextmenu", on_row_contextmenu)
+
+        # --- intercept dialog ---
+        if intercept_mgr is not None:
+            build_intercept_panel(intercept_mgr, detail_col)
+
         # --- initial load ---
         _refresh_table(store, state, table)
 
@@ -105,7 +137,15 @@ def build_ui(store: Store) -> None:
                     try:
                         entry = q.get_nowait()
                         if state["filter"].matches(entry):
-                            state["entries"].insert(0, entry)
+                            # update existing row or insert
+                            existing = next(
+                                (i for i, e in enumerate(state["entries"]) if e.id == entry.id),
+                                None,
+                            )
+                            if existing is not None:
+                                state["entries"][existing] = entry
+                            else:
+                                state["entries"].insert(0, entry)
                             _update_table_rows(state, table)
                     except asyncio.QueueEmpty:
                         pass
@@ -136,6 +176,7 @@ def _build_table() -> ui.table:
             "align": "center",
             "style": "width:70px",
         },
+        {"name": "size", "label": "Size", "field": "size", "align": "right", "style": "width:70px"},
         {
             "name": "duration",
             "label": "ms",
@@ -157,23 +198,32 @@ def _build_table() -> ui.table:
         .props("dense flat dark virtual-scroll")
     )
     table.add_slot(
-        "body-cell-method",
-        """
-        <q-td :props="props">
-          <q-badge
-            :color="{'GET':'blue','POST':'green','PUT':'orange','PATCH':'purple','DELETE':'red'}[props.value] || 'grey'"
-            :label="props.value" rounded />
-        </q-td>
-        """,
-    )
-    table.add_slot(
-        "body-cell-status",
-        """
-        <q-td :props="props">
-          <q-badge v-if="props.value"
-            :color="props.value < 300 ? 'positive' : props.value < 400 ? 'info' : props.value < 500 ? 'warning' : 'negative'"
-            :label="props.value" rounded />
-        </q-td>
+        "body",
+        r"""
+        <q-tr :props="props"
+              :style="props.row.color ? 'background:' + props.row.color + '33' : ''"
+              @click="$emit('row-click', $event, props.row)"
+              @contextmenu.prevent="$emit('row-contextmenu', $event, props.row)"
+              style="cursor:pointer">
+          <q-td key="id" :props="props">{{ props.row.id }}</q-td>
+          <q-td key="method" :props="props">
+            <q-badge
+              :color="{'GET':'blue','POST':'green','PUT':'orange','PATCH':'purple','DELETE':'red'}[props.row.method] || 'grey'"
+              :label="props.row.method" rounded />
+          </q-td>
+          <q-td key="host" :props="props">{{ props.row.host }}</q-td>
+          <q-td key="path" :props="props">{{ props.row.path }}</q-td>
+          <q-td key="status" :props="props">
+            <q-badge v-if="props.row.status_code"
+              :color="props.row.status_code < 300 ? 'positive' : props.row.status_code < 400 ? 'info' : props.row.status_code < 500 ? 'warning' : 'negative'"
+              :label="props.row.status_code" rounded />
+          </q-td>
+          <q-td key="size" :props="props" class="text-right text-grey">{{ props.row.size }}</q-td>
+          <q-td key="duration" :props="props" class="text-right text-grey">{{ props.row.duration_ms }}</q-td>
+          <q-td key="protocol" :props="props">
+            <q-badge color="grey-7" :label="props.row.protocol" rounded />
+          </q-td>
+        </q-tr>
         """,
     )
     return table
@@ -191,14 +241,18 @@ def _update_table_rows(state: dict, table: ui.table) -> None:
 
 
 def _entry_to_row(e: Entry) -> dict:
+    size = len(e.resp_body) if e.resp_body else 0
+    size_str = f"{size:,}" if size else ""
     return {
         "id": e.id,
         "method": e.method,
         "host": e.host,
         "path": e.path + (f"?{e.query}" if e.query else ""),
         "status_code": e.status_code,
-        "duration_ms": e.duration_ms,
+        "size": size_str,
+        "duration_ms": e.duration_ms or "",
         "protocol": e.protocol,
+        "color": getattr(e, "color", ""),
     }
 
 

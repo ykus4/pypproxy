@@ -28,6 +28,7 @@ class Entry:
     protocol: str = "http"
     tags: list[str] = field(default_factory=list)
     modified: bool = False
+    color: str = ""  # row highlight color (hex or name)
 
     def to_dict(self) -> dict:
         import base64
@@ -49,6 +50,7 @@ class Entry:
             "protocol": self.protocol,
             "tags": self.tags,
             "modified": self.modified,
+            "color": self.color,
         }
 
 
@@ -58,8 +60,14 @@ class Filter:
     host: str = ""
     search: str = ""
     protocol: str = ""
+    expression: str = ""  # PacketProxy-style filter expression
 
     def matches(self, entry: Entry) -> bool:
+        # Advanced expression takes precedence when set
+        if self.expression:
+            from paxy.store.filter_parser import FilterExpression
+
+            return FilterExpression(self.expression).matches(entry)
         if self.method and entry.method != self.method:
             return False
         if self.host and entry.host != self.host:

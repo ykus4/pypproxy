@@ -22,7 +22,7 @@ class CA:
 
     @classmethod
     def load_or_create(cls, cert_path: str, key_path: str) -> CA:
-        cp, kp = Path(cert_path), Path(key_path)
+        cp, kp = Path(cert_path).resolve(), Path(key_path).resolve()
         if cp.exists() and kp.exists():
             return cls._load(cp, kp)
         return cls._generate(cp, kp)

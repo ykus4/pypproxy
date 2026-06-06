@@ -6,12 +6,12 @@ import ssl
 import time
 from urllib.parse import urlparse
 
-from ..cert.ca import CA
-from ..interceptor.interceptor import Interceptor
-from ..proto import grpc as grpc_proto
-from ..proto import ws as ws_proto
-from ..script.engine import ScriptEngine
-from ..store.store import Store
+from paxy.cert.ca import CA
+from paxy.interceptor.interceptor import Interceptor
+from paxy.proto import grpc as grpc_proto
+from paxy.proto import ws as ws_proto
+from paxy.script.engine import ScriptEngine
+from paxy.store.store import Store
 
 logger = logging.getLogger(__name__)
 
@@ -254,7 +254,7 @@ class Proxy:
         request_line: bytes,
         headers_raw: bytes,
     ) -> None:
-        from ..store.models import Entry
+        from paxy.store.models import Entry
 
         try:
             server_reader, server_writer = await asyncio.open_connection(

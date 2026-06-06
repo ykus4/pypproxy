@@ -77,6 +77,7 @@ def build_ui(
             resender_tab = ui.tab("Resender", icon="send")
             bulk_tab = ui.tab("Bulk Sender", icon="dynamic_feed")
             diff_tab = ui.tab("Diff", icon="difference")
+            security_tab = ui.tab("Security", icon="security")
 
         with (
             ui.tab_panels(tabs, value=traffic_tab)
@@ -113,6 +114,11 @@ def build_ui(
 
                 diff_container = ui.column().classes("w-full h-full overflow-auto q-pa-md")
                 diff_state = build_diff_view(diff_container)
+
+            with ui.tab_panel(security_tab).classes("p-0 h-full"):
+                from .security_tab import build_security_tab
+
+                sec_state = build_security_tab(store)
 
         clear_btn.on("click", lambda: _clear(store, state, table, detail_col))
 
@@ -156,6 +162,10 @@ def build_ui(
                 ui.menu_item(
                     "Send to Bulk Sender",
                     on_click=lambda: (bulk_state["open_entry"](entry), tabs.set_value(bulk_tab)),
+                )
+                ui.menu_item(
+                    "Security check",
+                    on_click=lambda: (sec_state["open_entry"](entry), tabs.set_value(security_tab)),
                 )
                 ui.menu_item(
                     "Set as Diff left",

@@ -23,10 +23,10 @@ jobs:
         run: uv sync
 
       - name: Lint (ruff)
-        run: uv run ruff check paxy/
+        run: uv run ruff check pypproxy/
 
       - name: Format check (ruff)
-        run: uv run ruff format --check paxy/
+        run: uv run ruff format --check pypproxy/
 
   test:
     runs-on: ubuntu-latest

@@ -10,7 +10,7 @@ METHOD_COLORS: dict[str, str] = {
     "OPTIONS": "grey",
 }
 
-PALETTE = {
+PALETTE_DARK = {
     "bg": "#0a0e1a",
     "surface": "#111827",
     "surface2": "#1a2236",
@@ -19,6 +19,19 @@ PALETTE = {
     "text": "#e2e8f0",
     "text_muted": "#64748b",
 }
+
+PALETTE_LIGHT = {
+    "bg": "#f8fafc",
+    "surface": "#ffffff",
+    "surface2": "#f1f5f9",
+    "border": "#e2e8f0",
+    "accent": "#2563eb",
+    "text": "#0f172a",
+    "text_muted": "#94a3b8",
+}
+
+# default
+PALETTE = PALETTE_DARK
 
 
 def status_color(code: int) -> str:
@@ -45,16 +58,27 @@ def status_badge(code: int) -> None:
 
 
 def apply_dark_theme() -> None:
+    dark = PALETTE_DARK
+    light = PALETTE_LIGHT
     ui.add_head_html(f"""
     <style>
       :root {{
-        --pp-bg: {PALETTE["bg"]};
-        --pp-surface: {PALETTE["surface"]};
-        --pp-surface2: {PALETTE["surface2"]};
-        --pp-border: {PALETTE["border"]};
-        --pp-accent: {PALETTE["accent"]};
-        --pp-text: {PALETTE["text"]};
-        --pp-muted: {PALETTE["text_muted"]};
+        --pp-bg: {dark["bg"]};
+        --pp-surface: {dark["surface"]};
+        --pp-surface2: {dark["surface2"]};
+        --pp-border: {dark["border"]};
+        --pp-accent: {dark["accent"]};
+        --pp-text: {dark["text"]};
+        --pp-muted: {dark["text_muted"]};
+      }}
+      :root[data-theme="light"] {{
+        --pp-bg: {light["bg"]};
+        --pp-surface: {light["surface"]};
+        --pp-surface2: {light["surface2"]};
+        --pp-border: {light["border"]};
+        --pp-accent: {light["accent"]};
+        --pp-text: {light["text"]};
+        --pp-muted: {light["text_muted"]};
       }}
 
       * {{ box-sizing: border-box; }}
@@ -303,5 +327,49 @@ def apply_dark_theme() -> None:
       ::-webkit-scrollbar-track {{ background: transparent; }}
       ::-webkit-scrollbar-thumb {{ background: var(--pp-border); border-radius: 2px; }}
       ::-webkit-scrollbar-thumb:hover {{ background: #2d4060; }}
+
+      /* ---- Light mode adjustments ---- */
+      :root[data-theme="light"] .m-get    {{ background: rgba(37,99,235,0.1); color: #1d4ed8; }}
+      :root[data-theme="light"] .m-post   {{ background: rgba(22,163,74,0.1);  color: #15803d; }}
+      :root[data-theme="light"] .m-put    {{ background: rgba(217,119,6,0.1);  color: #b45309; }}
+      :root[data-theme="light"] .m-patch  {{ background: rgba(126,34,206,0.1); color: #7e22ce; }}
+      :root[data-theme="light"] .m-delete {{ background: rgba(220,38,38,0.1);  color: #dc2626; }}
+      :root[data-theme="light"] .s-2 {{ background: rgba(22,163,74,0.1);  color: #15803d; }}
+      :root[data-theme="light"] .s-3 {{ background: rgba(2,132,199,0.1);  color: #0284c7; }}
+      :root[data-theme="light"] .s-4 {{ background: rgba(217,119,6,0.1);  color: #b45309; }}
+      :root[data-theme="light"] .s-5 {{ background: rgba(220,38,38,0.1);  color: #dc2626; }}
+      :root[data-theme="light"] .paxy-body-pre {{
+        background: #f8fafc; border-color: #e2e8f0;
+      }}
+      :root[data-theme="light"] .pp-url-bar {{
+        background: #f1f5f9; border-color: #e2e8f0;
+      }}
+      :root[data-theme="light"] .q-menu {{
+        box-shadow: 0 4px 24px rgba(0,0,0,0.12) !important;
+      }}
+      :root[data-theme="light"] ::-webkit-scrollbar-thumb {{ background: #cbd5e1; }}
     </style>
+
+    <script>
+      // Theme persistence via localStorage
+      (function() {{
+        const saved = localStorage.getItem('pp-theme') || 'dark';
+        if (saved === 'light') document.documentElement.setAttribute('data-theme', 'light');
+      }})();
+
+      window.ppSetTheme = function(mode) {{
+        if (mode === 'light') {{
+          document.documentElement.setAttribute('data-theme', 'light');
+        }} else {{
+          document.documentElement.removeAttribute('data-theme');
+        }}
+        localStorage.setItem('pp-theme', mode);
+      }};
+
+      window.ppToggleTheme = function() {{
+        const current = document.documentElement.getAttribute('data-theme');
+        ppSetTheme(current === 'light' ? 'dark' : 'light');
+        return current !== 'light' ? 'light' : 'dark';
+      }};
+    </script>
     """)

@@ -162,6 +162,16 @@ def build_ui(
                     ui.button(
                         icon="delete_sweep", on_click=lambda: _clear_traffic(store, state)
                     ).props("flat dense size=sm color=negative").tooltip("Clear traffic")
+                    ui.button(
+                        icon="light_mode",
+                        on_click=lambda: ui.run_javascript(
+                            "const t = ppToggleTheme(); "
+                            "document.querySelector('.pp-theme-btn .material-icons').textContent = "
+                            "t === 'light' ? 'dark_mode' : 'light_mode';"
+                        ),
+                    ).props("flat dense size=sm").classes("pp-theme-btn").style(
+                        f"color:{PALETTE['text_muted']}"
+                    ).tooltip("Toggle light/dark mode")
                     ui.button(icon="settings", on_click=lambda: ui.navigate.to("/settings")).props(
                         "flat dense size=sm"
                     ).style(f"color:{PALETTE['text_muted']}").tooltip("Settings")

@@ -227,7 +227,11 @@ class Proxy:
 
         start = time.monotonic()
         try:
-            async with httpx.AsyncClient(verify=False, timeout=30) as client:
+            async with httpx.AsyncClient(
+                verify=False,
+                timeout=30,
+                http2=True,
+            ) as client:
                 resp = await client.request(
                     method=method,
                     url=url,

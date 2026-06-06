@@ -27,9 +27,10 @@ def build_ui(store: Store, intercept_mgr: InterceptManager | None = None) -> Non
             "entries": [],
             "selected": None,
             "filter": Filter(),
+            "compare_left": None,
         }
 
-        # --- toolbar ---
+        # toolbar
         with ui.header().classes("items-center q-px-md gap-4").style("background:#1a1a2e"):
             ui.label("paxy").classes("text-h6 text-weight-bold")
             ui.badge("●", color="positive").props("rounded").tooltip("Proxy running")
@@ -39,10 +40,10 @@ def build_ui(store: Store, intercept_mgr: InterceptManager | None = None) -> Non
                 .props("dense outlined dark")
                 .classes("w-96")
                 .tooltip(
-                    "Supports: host, path, method, status, protocol, request, response, full_text  Ops: == != contains ~  Logic: && ||"
+                    "Fields: host path method status protocol request response full_text  "
+                    "Ops: == != contains ~  Logic: && ||"
                 )
             )
-
             ui.space()
 
             if intercept_mgr is not None:
@@ -58,30 +59,57 @@ def build_ui(store: Store, intercept_mgr: InterceptManager | None = None) -> Non
 
             clear_btn = ui.button("Clear", icon="delete_sweep").props("color=negative size=sm flat")
 
-        # --- layout ---
-        with (
-            ui.splitter(value=60).classes("w-full").style("height: calc(100vh - 56px)") as splitter
-        ):
-            with splitter.before, ui.column().classes("w-full h-full overflow-auto"):
-                table = _build_table()
+        # main tabs
+        with ui.tabs().props("dense dark").classes("bg-dark") as tabs:
+            traffic_tab = ui.tab("Traffic", icon="list")
+            resender_tab = ui.tab("Resender", icon="send")
+            bulk_tab = ui.tab("Bulk Sender", icon="dynamic_feed")
+            diff_tab = ui.tab("Diff", icon="difference")
 
+        with (
+            ui.tab_panels(tabs, value=traffic_tab)
+            .classes("w-full flex-1")
+            .style("height:calc(100vh - 96px)")
+        ):
             with (
-                splitter.after,
-                ui.column().classes("w-full h-full overflow-auto q-pa-sm") as detail_col,
+                ui.tab_panel(traffic_tab).classes("p-0 h-full"),
+                ui.splitter(value=60).classes("w-full h-full") as splitter,
             ):
-                render_detail(None, detail_col)
+                with splitter.before, ui.column().classes("w-full h-full overflow-auto"):
+                    table = _build_table()
+                with (
+                    splitter.after,
+                    ui.column().classes("w-full h-full overflow-auto q-pa-sm") as detail_col,
+                ):
+                    render_detail(None, detail_col)
+
+            with ui.tab_panel(resender_tab).classes("p-0 h-full"):
+                from .resender import build_resender_tab
+
+                resender_container = ui.column().classes("w-full h-full")
+                with resender_container:
+                    build_resender_tab(store)
+
+            with ui.tab_panel(bulk_tab).classes("p-0 h-full"):
+                from .bulk_sender_ui import build_bulk_sender
+
+                bulk_container = ui.column().classes("w-full h-full overflow-auto q-pa-md")
+                bulk_state = build_bulk_sender(bulk_container)
+
+            with ui.tab_panel(diff_tab).classes("p-0 h-full"):
+                from .diff_view import build_diff_view
+
+                diff_container = ui.column().classes("w-full h-full overflow-auto q-pa-md")
+                diff_state = build_diff_view(diff_container)
 
         clear_btn.on("click", lambda: _clear(store, state, table, detail_col))
 
-        # --- filter ---
         def apply_filter() -> None:
-            expr = filter_input.value or ""
-            state["filter"] = Filter(expression=expr)
+            state["filter"] = Filter(expression=filter_input.value or "")
             _refresh_table(store, state, table)
 
         filter_input.on("update:model-value", lambda: apply_filter())
 
-        # --- row click → detail ---
         async def on_row_click(e) -> None:  # noqa: ANN001
             try:
                 row = e.args[1] if isinstance(e.args, list) else e.args
@@ -95,23 +123,49 @@ def build_ui(store: Store, intercept_mgr: InterceptManager | None = None) -> Non
 
         table.on("row-click", on_row_click)
 
-        # --- row right-click → color menu ---
         async def on_row_contextmenu(e) -> None:  # noqa: ANN001
             try:
                 row = e.args[1] if isinstance(e.args, list) else e.args
                 entry_id = int(row["id"])
             except (IndexError, KeyError, TypeError, ValueError):
                 return
+            entry = store.get(entry_id)
+            if not entry:
+                return
+
             with ui.menu() as menu:
+                ui.menu_item(
+                    "Send to Resender",
+                    on_click=lambda: (
+                        tabs.set_value(resender_tab),
+                        ui.notify(f"Opened #{entry.id} in Resender", type="info"),
+                    ),
+                )
+                ui.menu_item(
+                    "Send to Bulk Sender",
+                    on_click=lambda: (bulk_state["open_entry"](entry), tabs.set_value(bulk_tab)),
+                )
+                ui.menu_item(
+                    "Set as Diff left",
+                    on_click=lambda: _set_diff_left(entry, state),
+                )
+                if state.get("compare_left"):
+                    ui.menu_item(
+                        "Diff with left",
+                        on_click=lambda eid=entry_id: _compare(
+                            eid, state, diff_state, tabs, diff_tab, store
+                        ),
+                    )
+                ui.separator()
                 ui.label("Set color").classes("q-px-sm text-caption text-grey")
                 for color, label in zip(_ROW_COLORS, _COLOR_LABELS, strict=False):
 
-                    def _set(c=color, eid=entry_id) -> None:
+                    def _set_color(c=color, eid=entry_id) -> None:
                         store.set_color(eid, c)
                         _refresh_table(store, state, table)
                         menu.close()
 
-                    with ui.menu_item(on_click=_set), ui.row().classes("items-center gap-2"):
+                    with ui.menu_item(on_click=_set_color), ui.row().classes("items-center gap-2"):
                         if color:
                             ui.element("div").style(
                                 f"width:12px;height:12px;border-radius:2px;background:{color}"
@@ -121,14 +175,10 @@ def build_ui(store: Store, intercept_mgr: InterceptManager | None = None) -> Non
 
         table.on("row-contextmenu", on_row_contextmenu)
 
-        # --- intercept dialog ---
         if intercept_mgr is not None:
             build_intercept_panel(intercept_mgr, detail_col)
 
-        # --- initial load ---
         _refresh_table(store, state, table)
-
-        # --- live updates ---
         q = store.subscribe()
 
         async def _poller() -> None:
@@ -137,7 +187,6 @@ def build_ui(store: Store, intercept_mgr: InterceptManager | None = None) -> Non
                     try:
                         entry = q.get_nowait()
                         if state["filter"].matches(entry):
-                            # update existing row or insert
                             existing = next(
                                 (i for i, e in enumerate(state["entries"]) if e.id == entry.id),
                                 None,
@@ -155,6 +204,26 @@ def build_ui(store: Store, intercept_mgr: InterceptManager | None = None) -> Non
 
         nicegui_app.on_shutdown(lambda: store.unsubscribe(q))
         asyncio.ensure_future(_poller())
+
+
+def _set_diff_left(entry: Entry, state: dict) -> None:
+    state["compare_left"] = entry
+    ui.notify(f"#{entry.id} set as left side", type="info")
+
+
+def _compare(
+    right_id: int,
+    state: dict,
+    diff_state: dict,
+    tabs: ui.tabs,
+    tab: ui.tab,
+    store: Store,
+) -> None:
+    left = state.get("compare_left")
+    right = store.get(right_id)
+    if left and right:
+        diff_state["set_entries"](left, right)
+        tabs.set_value(tab)
 
 
 def _build_table() -> ui.table:
@@ -205,7 +274,7 @@ def _build_table() -> ui.table:
               @click="$emit('row-click', $event, props.row)"
               @contextmenu.prevent="$emit('row-contextmenu', $event, props.row)"
               style="cursor:pointer">
-          <q-td key="id" :props="props">{{ props.row.id }}</q-td>
+          <q-td key="id" :props="props" class="text-right text-grey">{{ props.row.id }}</q-td>
           <q-td key="method" :props="props">
             <q-badge
               :color="{'GET':'blue','POST':'green','PUT':'orange','PATCH':'purple','DELETE':'red'}[props.row.method] || 'grey'"
@@ -242,14 +311,13 @@ def _update_table_rows(state: dict, table: ui.table) -> None:
 
 def _entry_to_row(e: Entry) -> dict:
     size = len(e.resp_body) if e.resp_body else 0
-    size_str = f"{size:,}" if size else ""
     return {
         "id": e.id,
         "method": e.method,
         "host": e.host,
         "path": e.path + (f"?{e.query}" if e.query else ""),
         "status_code": e.status_code,
-        "size": size_str,
+        "size": f"{size:,}" if size else "",
         "duration_ms": e.duration_ms or "",
         "protocol": e.protocol,
         "color": getattr(e, "color", ""),

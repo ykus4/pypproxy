@@ -22,8 +22,6 @@ from pypproxy.codec import (
 )
 from pypproxy.store.models import Entry
 
-from .theme import method_badge, status_badge
-
 _VIEW_MODES = [
     "Auto",
     "Text",
@@ -43,30 +41,41 @@ _VIEW_MODES = [
 def render_detail(entry: Entry | None, container: ui.element) -> None:
     container.clear()
     if entry is None:
-        with container:
-            ui.label("Select a request to inspect").classes("text-grey q-pa-md")
+        with (
+            container,
+            ui.element("div").style(
+                "display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; color:var(--pp-muted)"
+            ),
+        ):
+            ui.html(
+                '<span class="material-icons" style="font-size:36px; opacity:0.2; margin-bottom:8px">preview</span>'
+            )
+            ui.element("div").style("font-size:13px").text = "Select a request to inspect"
         return
 
     with container:
         # --- request ---
-        with ui.expansion("Request", icon="upload", value=True).classes("w-full"):
-            with ui.row().classes("items-center q-mb-sm gap-2"):
-                method_badge(entry.method)
-                url = f"{entry.scheme}://{entry.host}{entry.path}"
-                if entry.query:
-                    url += "?" + entry.query
-                ui.label(url).classes("text-caption text-mono")
-
+        with ui.element("div").classes("pp-detail-section"):
+            url = f"{entry.scheme}://{entry.host}{entry.path}"
             if entry.query:
-                ui.label("Query Parameters").classes("text-caption text-weight-bold q-mt-sm")
+                url += "?" + entry.query
+            with ui.row().classes("items-center gap-2 q-mb-sm"):
+                ui.html(f'<span class="m-pill m-{entry.method.lower()}">{entry.method}</span>')
+                ui.element("div").classes("pp-url-bar").style("flex:1").text = url
+
+        with ui.expansion("Request", value=True).classes("w-full"):
+            if entry.query:
+                ui.element("div").classes("pp-section-title").text = "QUERY"
                 _render_query_params(entry.query)
 
             if entry.req_headers:
-                ui.label("Headers").classes("text-caption text-weight-bold q-mt-sm")
+                ui.element("div").classes("pp-section-title").style(
+                    "margin-top:8px"
+                ).text = "HEADERS"
                 _render_headers(entry.req_headers)
 
             if entry.req_body:
-                ui.label("Body").classes("text-caption text-weight-bold q-mt-sm")
+                ui.element("div").classes("pp-section-title").style("margin-top:8px").text = "BODY"
                 ct = entry.req_headers.get("content-type", [""])[0]
                 te = entry.req_headers.get("transfer-encoding", [""])[0]
                 body = decode_chunked(entry.req_body) if "chunked" in te.lower() else entry.req_body
@@ -75,18 +84,26 @@ def render_detail(entry: Entry | None, container: ui.element) -> None:
         ui.separator()
 
         # --- response ---
-        with ui.expansion("Response", icon="download", value=True).classes("w-full"):
+        with ui.expansion("Response", value=True).classes("w-full"):
             if entry.status_code:
                 with ui.row().classes("items-center gap-2 q-mb-sm"):
-                    status_badge(entry.status_code)
-                    ui.label(f"{entry.duration_ms} ms").classes("text-caption text-grey")
+                    ui.html(
+                        f'<span class="s-pill s-{entry.status_code // 100}">{entry.status_code}</span>'
+                    )
+                    ui.element("span").style(
+                        "font-size:11px; color:var(--pp-muted)"
+                    ).text = f"{entry.duration_ms} ms"
+                    if entry.resp_body:
+                        ui.element("span").classes(
+                            "pp-size-chip"
+                        ).text = f"{len(entry.resp_body):,} B"
 
             if entry.resp_headers:
-                ui.label("Headers").classes("text-caption text-weight-bold q-mt-sm")
+                ui.element("div").classes("pp-section-title").text = "HEADERS"
                 _render_headers(entry.resp_headers)
 
             if entry.resp_body:
-                ui.label("Body").classes("text-caption text-weight-bold q-mt-sm")
+                ui.element("div").classes("pp-section-title").style("margin-top:8px").text = "BODY"
                 ct = entry.resp_headers.get("content-type", [""])[0]
                 te = entry.resp_headers.get("transfer-encoding", [""])[0]
                 body = (
@@ -95,10 +112,8 @@ def render_detail(entry: Entry | None, container: ui.element) -> None:
                 charset = detect_charset(ct)
                 _render_body_with_selector(body, ct, entry.resp_headers, charset)
 
-        ui.separator()
-
         # --- replay ---
-        with ui.row().classes("q-pa-sm"):
+        with ui.element("div").style("padding:10px 14px"):
             ui.button("Replay", icon="replay", on_click=lambda: _replay(entry)).props(
                 "color=primary size=sm"
             )
@@ -251,13 +266,11 @@ def _to_hex(raw: bytes, width: int = 16) -> str:
 
 
 def _render_headers(headers: dict[str, list[str]]) -> None:
-    with ui.element("table").classes("paxy-header-table w-full"):
+    with ui.element("div").classes("pp-headers"):
         for k, vs in sorted(headers.items()):
-            with ui.element("tr"):
-                ui.element("td").style(
-                    "color:#aaa; min-width:160px; padding:2px 8px; font-size:12px"
-                ).text = k
-                ui.element("td").style("padding:2px 8px; font-size:12px").text = ", ".join(vs)
+            with ui.element("div").classes("pp-hrow"):
+                ui.element("div").classes("pp-hkey").text = k
+                ui.element("div").classes("pp-hval").text = ", ".join(vs)
 
 
 async def _replay(entry: Entry) -> None:

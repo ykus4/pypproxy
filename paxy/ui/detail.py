@@ -64,13 +64,15 @@ def _render_headers(headers: dict[str, list[str]]) -> None:
     with ui.element("table").classes("paxy-header-table w-full"):
         for k, vs in sorted(headers.items()):
             with ui.element("tr"):
-                ui.element("td").bind_text_from({"t": k}, "t")
-                ui.element("td").bind_text_from({"t": ", ".join(vs)}, "t")
+                ui.element("td").style(
+                    "color:#aaa; min-width:160px; padding:2px 8px; font-size:12px"
+                ).text = k
+                ui.element("td").style("padding:2px 8px; font-size:12px").text = ", ".join(vs)
 
 
 def _render_body(raw: bytes) -> None:
     text = _decode_body(raw)
-    ui.element("pre").classes("paxy-body-pre").bind_text_from({"t": text}, "t")
+    ui.element("pre").classes("paxy-body-pre").text = text
 
 
 def _decode_body(raw: bytes) -> str:

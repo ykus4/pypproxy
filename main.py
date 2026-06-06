@@ -39,7 +39,12 @@ def parse_args() -> argparse.Namespace:
 
 
 async def run_proxy(proxy: Proxy, host: str, port: int) -> None:
-    server = await asyncio.start_server(proxy.handle, host, port)
+    try:
+        server = await asyncio.start_server(proxy.handle, host, port)
+    except OSError as e:
+        logger.error("Failed to start proxy on %s:%d — %s", host, port, e)
+        logger.error("Is another process already using port %d? Run: lsof -i :%d", port, port)
+        return
     logger.info("proxy listening on %s:%d", host, port)
     async with server:
         await server.serve_forever()
@@ -97,14 +102,14 @@ def run_gui(args: argparse.Namespace) -> None:
     from nicegui import app as nicegui_app
     from nicegui import ui
 
-    from paxy.api.server import app as api_app
     from paxy.api.server import init as api_init
+    from paxy.api.server import register_routes
     from paxy.ui.app import build_ui
 
     cfg, proxy, store, rules = _build_core(args)
     api_init(store, rules)
 
-    nicegui_app.mount("/api", api_app)
+    register_routes(nicegui_app)
     build_ui(store)
 
     async def startup() -> None:

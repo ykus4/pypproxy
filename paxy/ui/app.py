@@ -79,13 +79,14 @@ def build_ui(store: Store) -> None:
         protocol_select.on("update:model-value", lambda: apply_filter())
 
         # row click → show detail
+        # NiceGUI 3.x: e.args is [event, row_dict, row_index]
         async def on_row_click(e) -> None:  # noqa: ANN001
-            entry_id = e.args.get("key") or (
-                e.args[1].get("id") if isinstance(e.args, list) else None
-            )
-            if entry_id is None:
+            try:
+                row = e.args[1] if isinstance(e.args, list) else e.args
+                entry_id = int(row["id"])
+            except (IndexError, KeyError, TypeError, ValueError):
                 return
-            entry = store.get(int(entry_id))
+            entry = store.get(entry_id)
             if entry:
                 state["selected"] = entry
                 render_detail(entry, detail_col)

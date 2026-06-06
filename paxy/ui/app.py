@@ -17,7 +17,16 @@ _ROW_COLORS = ["", "#b71c1c", "#1b5e20", "#0d47a1", "#f57f17", "#4a148c"]
 _COLOR_LABELS = ["None", "Red", "Green", "Blue", "Yellow", "Purple"]
 
 
-def build_ui(store: Store, intercept_mgr: InterceptManager | None = None) -> None:
+def build_ui(
+    store: Store,
+    intercept_mgr: InterceptManager | None = None,
+    settings_kwargs: dict | None = None,
+) -> None:
+    if settings_kwargs:
+        from .settings import build_settings_page
+
+        build_settings_page(**settings_kwargs)
+
     @ui.page("/")
     async def index() -> None:
         apply_dark_theme()
@@ -58,6 +67,9 @@ def build_ui(store: Store, intercept_mgr: InterceptManager | None = None) -> Non
                 )
 
             clear_btn = ui.button("Clear", icon="delete_sweep").props("color=negative size=sm flat")
+            ui.button(icon="settings", on_click=lambda: ui.navigate.to("/settings")).props(
+                "flat dark size=sm"
+            ).tooltip("Settings")
 
         # main tabs
         with ui.tabs().props("dense dark").classes("bg-dark") as tabs:

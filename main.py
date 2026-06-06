@@ -7,6 +7,7 @@ from pathlib import Path
 
 from paxy.cert.ca import CA
 from paxy.config.config import Config
+from paxy.intercept.manager import InterceptManager
 from paxy.interceptor.interceptor import Interceptor
 from paxy.proxy.proxy import Proxy
 from paxy.rule.rule import RuleManager
@@ -35,6 +36,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--config", default="", help="path to YAML config file")
     p.add_argument("--script", default="", help="path to Python script file")
     p.add_argument("--ca-dir", default="", help="directory to store CA cert/key")
+    p.add_argument("--no-db", action="store_true", help="disable SQLite persistence")
     return p.parse_args()
 
 
@@ -50,7 +52,9 @@ async def run_proxy(proxy: Proxy, host: str, port: int) -> None:
         await server.serve_forever()
 
 
-def _build_core(args: argparse.Namespace) -> tuple[Config, Proxy, Store, RuleManager]:
+def _build_core(
+    args: argparse.Namespace,
+) -> tuple[Config, Proxy, Store, RuleManager, InterceptManager, str]:
     cfg = Config.load(str(Path(args.config).resolve())) if args.config else Config.default()
 
     if args.port:
@@ -71,9 +75,12 @@ def _build_core(args: argparse.Namespace) -> tuple[Config, Proxy, Store, RuleMan
     key_path = cfg.ca.key_path or str(ca_dir / "ca-key.pem")
     ca = CA.load_or_create(cert_path, key_path)
 
+    db_path = str(ca_dir / "paxy.db") if not args.no_db else ""
+
     store = Store()
     rules = RuleManager()
     interceptor = Interceptor(rules, store)
+    intercept_mgr = InterceptManager()
 
     script: ScriptEngine | None = None
     if cfg.script.path:
@@ -87,15 +94,30 @@ def _build_core(args: argparse.Namespace) -> tuple[Config, Proxy, Store, RuleMan
         store=store,
         script=script,
         ignore=set(cfg.proxy.ignore),
+        intercept_manager=intercept_mgr,
     )
 
     print("paxy MITM proxy")
     print(f"  proxy : {cfg.proxy.addr}:{cfg.proxy.port}")
     print(f"  UI    : http://{cfg.ui.addr}:{cfg.ui.port}")
     print(f"  CA    : {cert_path}")
+    if db_path:
+        print(f"  DB    : {db_path}")
     print("Install the CA cert in your browser/device to avoid TLS warnings.")
 
-    return cfg, proxy, store, rules
+    return cfg, proxy, store, rules, intercept_mgr, db_path
+
+
+async def _init_db(store: Store, db_path: str) -> None:
+    if not db_path:
+        return
+    from paxy.store.db import Database
+
+    db = Database(db_path)
+    await db.open()
+    store.set_db(db)
+    await store.load_from_db()
+    logger.info("loaded %d entries from database", len(store._entries))
 
 
 def run_gui(args: argparse.Namespace) -> None:
@@ -106,15 +128,16 @@ def run_gui(args: argparse.Namespace) -> None:
     from paxy.api.server import register_routes
     from paxy.ui.app import build_ui
 
-    cfg, proxy, store, rules = _build_core(args)
+    cfg, proxy, store, rules, intercept_mgr, db_path = _build_core(args)
     api_init(store, rules)
 
     register_routes(nicegui_app)
-    build_ui(store)
+    build_ui(store, intercept_mgr)
 
     async def startup() -> None:
         loop = asyncio.get_event_loop()
         store.set_loop(loop)
+        await _init_db(store, db_path)
         asyncio.ensure_future(run_proxy(proxy, cfg.proxy.addr, cfg.proxy.port))
 
     nicegui_app.on_startup(startup)
@@ -136,12 +159,13 @@ def run_cui(args: argparse.Namespace) -> None:
     from paxy.api.server import init as api_init
     from paxy.ui.cui import run_cui as _run_cui
 
-    cfg, proxy, store, rules = _build_core(args)
+    cfg, proxy, store, rules, intercept_mgr, db_path = _build_core(args)
     api_init(store, rules)
 
     async def _main() -> None:
         loop = asyncio.get_event_loop()
         store.set_loop(loop)
+        await _init_db(store, db_path)
 
         uv_config = uvicorn.Config(
             api_app,

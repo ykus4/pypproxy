@@ -7,6 +7,7 @@ import time
 from urllib.parse import urlparse
 
 from paxy.cert.ca import CA
+from paxy.intercept.manager import InterceptManager
 from paxy.interceptor.interceptor import Interceptor
 from paxy.proto import grpc as grpc_proto
 from paxy.proto import ws as ws_proto
@@ -26,12 +27,14 @@ class Proxy:
         store: Store,
         script: ScriptEngine | None = None,
         ignore: set[str] | None = None,
+        intercept_manager: InterceptManager | None = None,
     ) -> None:
         self._ca = ca
         self._interceptor = interceptor
         self._store = store
         self._script = script
         self._ignore = ignore or set()
+        self._intercept = intercept_manager
 
     async def handle(
         self,
@@ -192,8 +195,18 @@ class Proxy:
     ) -> bytes:
         import httpx
 
+        from paxy.codec import decode_body
+
         if self._script:
             body = self._script.on_request(method, host, path, body)
+
+        # Manual intercept — pause until user forwards or drops
+        if self._intercept:
+            headers, body, drop = await self._intercept.intercept(
+                method, scheme, host, path, headers, body
+            )
+            if drop:
+                return b"HTTP/1.1 403 Forbidden\r\nContent-Length: 7\r\n\r\ndropped"
 
         entry, blocked = self._interceptor.process_request(
             method, scheme, host, path, query, headers, body
@@ -222,23 +235,36 @@ class Proxy:
                     content=entry.req_body,
                     follow_redirects=False,
                 )
-            resp_body = resp.content
+            raw_body = resp.content
+            content_encoding = resp.headers.get("content-encoding", "")
+            decoded_body, applied_encoding = decode_body(raw_body, content_encoding)
 
             if self._script:
-                resp_body = self._script.on_response(resp.status_code, resp_body)
+                decoded_body = self._script.on_response(resp.status_code, decoded_body)
 
             if grpc_proto.is_grpc({k: [v] for k, v in resp.headers.items()}):
-                grpc_proto.log_frames(entry.id, "response", resp_body)
+                grpc_proto.log_frames(entry.id, "response", decoded_body)
 
             resp_headers_dict = {}
             for k, v in resp.headers.multi_items():
                 resp_headers_dict.setdefault(k.lower(), []).append(v)
 
+            # Store decoded body so UI can display plain text
             self._interceptor.process_response(
-                entry, resp.status_code, resp_headers_dict, resp_body, start
+                entry, resp.status_code, resp_headers_dict, decoded_body, start
             )
 
-            return _build_http_response(resp.status_code, resp.headers.multi_items(), resp_body)
+            # Forward original (encoded) body to client unless script modified it
+            forward_body = decoded_body if self._script else raw_body
+            # Strip content-encoding header if we decoded the body to forward as-is
+            forward_headers = list(resp.headers.multi_items())
+            if applied_encoding and not self._script:
+                pass  # keep original encoding; body is untouched
+            elif applied_encoding and self._script:
+                forward_headers = [
+                    (k, v) for k, v in forward_headers if k.lower() != "content-encoding"
+                ]
+            return _build_http_response(resp.status_code, forward_headers, forward_body)
 
         except Exception as e:
             logger.warning("upstream error %s %s: %s", method, url, e)

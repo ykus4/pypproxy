@@ -46,7 +46,7 @@ async def run_proxy(proxy: Proxy, host: str, port: int) -> None:
 
 
 def _build_core(args: argparse.Namespace) -> tuple[Config, Proxy, Store, RuleManager]:
-    cfg = Config.load(args.config) if args.config else Config.default()
+    cfg = Config.load(str(Path(args.config).resolve())) if args.config else Config.default()
 
     if args.port:
         cfg.proxy.port = args.port
@@ -57,9 +57,9 @@ def _build_core(args: argparse.Namespace) -> tuple[Config, Proxy, Store, RuleMan
     if args.ui_addr:
         cfg.ui.addr = args.ui_addr
     if args.script:
-        cfg.script.path = args.script
+        cfg.script.path = str(Path(args.script).resolve())
 
-    ca_dir = Path(args.ca_dir) if args.ca_dir else Path(cfg.ca.cert_path).parent
+    ca_dir = Path(args.ca_dir).resolve() if args.ca_dir else Path(cfg.ca.cert_path).parent
     ca_dir.mkdir(parents=True, exist_ok=True)
 
     cert_path = cfg.ca.cert_path or str(ca_dir / "ca-cert.pem")

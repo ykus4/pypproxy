@@ -67,9 +67,9 @@ class Config:
 
         if ca := data.get("ca"):
             if "cert_path" in ca:
-                cfg.ca.cert_path = ca["cert_path"]
+                cfg.ca.cert_path = str(Path(ca["cert_path"]).resolve())
             if "key_path" in ca:
-                cfg.ca.key_path = ca["key_path"]
+                cfg.ca.key_path = str(Path(ca["key_path"]).resolve())
 
         if ui := data.get("ui"):
             if "addr" in ui:
@@ -78,7 +78,7 @@ class Config:
                 cfg.ui.port = int(ui["port"])
 
         if (script := data.get("script")) and "path" in script:
-            cfg.script.path = script["path"]
+            cfg.script.path = str(Path(script["path"]).resolve())
 
         return cfg
 

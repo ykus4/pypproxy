@@ -10,9 +10,11 @@ from pydantic import BaseModel
 
 from paxy.bulk.sender import BulkPayload, bulk_send, race_send
 from paxy.exporter.exporter import export_all, export_har, import_rules
+from paxy.exporter.importer import import_har, import_json
 from paxy.replay.replay import ReplayOptions, replay_many
 from paxy.rule.rule import Rule, RuleManager
 from paxy.store.models import Filter
+from paxy.store.scope import ScopeManager, ScopeRule
 from paxy.store.store import Store
 
 logger = logging.getLogger(__name__)
@@ -27,12 +29,14 @@ app.add_middleware(
 
 _store: Store | None = None
 _rules: RuleManager | None = None
+_scope: ScopeManager | None = None
 
 
-def init(store: Store, rules: RuleManager) -> None:
-    global _store, _rules
+def init(store: Store, rules: RuleManager, scope: ScopeManager | None = None) -> None:
+    global _store, _rules, _scope
     _store = store
     _rules = rules
+    _scope = scope
 
 
 def register_routes(target_app: FastAPI) -> None:
@@ -188,6 +192,99 @@ async def import_rules_endpoint(data: dict) -> JSONResponse:
 
     count = import_rules(_json.dumps(data.get("rules", data)), _rules)
     return JSONResponse({"imported": count})
+
+
+@app.post("/api/import/har")
+async def import_har_endpoint(data: dict) -> JSONResponse:
+    assert _store is not None
+    import json as _json
+
+    count = import_har(_json.dumps(data), _store)
+    return JSONResponse({"imported": count})
+
+
+@app.post("/api/import/json")
+async def import_json_endpoint(data: dict) -> JSONResponse:
+    assert _store is not None
+    import json as _json
+
+    count = import_json(_json.dumps(data.get("entries", data)), _store)
+    return JSONResponse({"imported": count})
+
+
+# --- full-text search ---
+
+
+@app.get("/api/search")
+async def fts_search(q: str = "", limit: int = 50) -> JSONResponse:
+    assert _store is not None
+    if not q:
+        return JSONResponse([])
+    db = getattr(_store, "_db", None)
+    if db is None:
+        # fallback: in-memory filter
+        f = Filter(search=q)
+        entries, _ = _store.list(f, 0, limit)
+        return JSONResponse(
+            [{"entry_id": e.id, "rank": 0.0, "snippet": e.host + e.path} for e in entries]
+        )
+    results = await db.search(q, limit)
+    return JSONResponse([r.to_dict() for r in results])
+
+
+# --- scope ---
+
+
+@app.get("/api/scope")
+async def list_scope() -> JSONResponse:
+    if _scope is None:
+        return JSONResponse({"enabled": False, "rules": []})
+    return JSONResponse(
+        {
+            "enabled": _scope.enabled,
+            "rules": [r.to_dict() for r in _scope.list()],
+        }
+    )
+
+
+@app.post("/api/scope")
+async def update_scope(data: dict) -> JSONResponse:
+    if _scope is None:
+        return JSONResponse({"error": "scope not initialized"}, status_code=503)
+    if "enabled" in data:
+        _scope.set_enabled(bool(data["enabled"]))
+    if "add" in data:
+        _scope.add(
+            ScopeRule(
+                pattern=data["add"].get("pattern", ""),
+                mode=data["add"].get("mode", "glob"),
+            )
+        )
+    if "remove" in data:
+        _scope.remove(data["remove"])
+    return JSONResponse({"enabled": _scope.enabled, "rules": [r.to_dict() for r in _scope.list()]})
+
+
+# --- active scan ---
+
+
+class ScanRequest(BaseModel):
+    entry_id: int
+    categories: list[str] = []
+    concurrency: int = 5
+
+
+@app.post("/api/scan")
+async def active_scan(req: ScanRequest) -> JSONResponse:
+    assert _store is not None
+    from paxy.scan.scanner import run_scan
+
+    entry = _store.get(req.entry_id)
+    if entry is None:
+        raise HTTPException(status_code=404, detail="entry not found")
+    cats = req.categories or None
+    results = await run_scan(entry, categories=cats, concurrency=req.concurrency)
+    return JSONResponse([r.to_dict() for r in results])
 
 
 # --- clear ---

@@ -13,6 +13,7 @@ from paxy.interceptor.interceptor import Interceptor
 from paxy.proxy.proxy import Proxy
 from paxy.rule.rule import RuleManager
 from paxy.script.engine import ScriptEngine
+from paxy.store.scope import ScopeManager
 from paxy.store.store import Store
 
 logging.basicConfig(
@@ -55,7 +56,9 @@ async def run_proxy(proxy: Proxy, host: str, port: int) -> None:
 
 def _build_core(
     args: argparse.Namespace,
-) -> tuple[Config, Proxy, Store, RuleManager, InterceptManager, str, ClientCertManager]:
+) -> tuple[
+    Config, Proxy, Store, RuleManager, InterceptManager, str, ClientCertManager, ScopeManager
+]:
     cfg = Config.load(str(Path(args.config).resolve())) if args.config else Config.default()
 
     if args.port:
@@ -80,7 +83,8 @@ def _build_core(
 
     store = Store()
     rules = RuleManager()
-    interceptor = Interceptor(rules, store)
+    scope_mgr = ScopeManager()
+    interceptor = Interceptor(rules, store, scope_mgr)
     intercept_mgr = InterceptManager()
     cert_mgr = ClientCertManager()
 
@@ -107,7 +111,7 @@ def _build_core(
         print(f"  DB    : {db_path}")
     print("Install the CA cert in your browser/device to avoid TLS warnings.")
 
-    return cfg, proxy, store, rules, intercept_mgr, db_path, cert_mgr
+    return cfg, proxy, store, rules, intercept_mgr, db_path, cert_mgr, scope_mgr
 
 
 async def _init_db(store: Store, db_path: str) -> None:
@@ -130,8 +134,8 @@ def run_gui(args: argparse.Namespace) -> None:
     from paxy.api.server import register_routes
     from paxy.ui.app import build_ui
 
-    cfg, proxy, store, rules, intercept_mgr, db_path, cert_mgr = _build_core(args)
-    api_init(store, rules)
+    cfg, proxy, store, rules, intercept_mgr, db_path, cert_mgr, scope_mgr = _build_core(args)
+    api_init(store, rules, scope_mgr)
 
     register_routes(nicegui_app)
     build_ui(
@@ -141,6 +145,7 @@ def run_gui(args: argparse.Namespace) -> None:
             "cfg": cfg,
             "rules": rules,
             "cert_mgr": cert_mgr,
+            "scope_mgr": scope_mgr,
         },
     )
 
@@ -169,8 +174,8 @@ def run_cui(args: argparse.Namespace) -> None:
     from paxy.api.server import init as api_init
     from paxy.ui.cui import run_cui as _run_cui
 
-    cfg, proxy, store, rules, intercept_mgr, db_path, cert_mgr = _build_core(args)
-    api_init(store, rules)
+    cfg, proxy, store, rules, intercept_mgr, db_path, cert_mgr, scope_mgr = _build_core(args)
+    api_init(store, rules, scope_mgr)
 
     async def _main() -> None:
         loop = asyncio.get_event_loop()

@@ -4,13 +4,20 @@ import time
 
 from paxy.rule.rule import Action, MatchContext, Modification, RuleManager
 from paxy.store.models import Entry
+from paxy.store.scope import ScopeManager
 from paxy.store.store import Store
 
 
 class Interceptor:
-    def __init__(self, rules: RuleManager, store: Store) -> None:
+    def __init__(
+        self,
+        rules: RuleManager,
+        store: Store,
+        scope: ScopeManager | None = None,
+    ) -> None:
         self._rules = rules
         self._store = store
+        self._scope = scope
 
     def process_request(
         self,
@@ -22,6 +29,20 @@ class Interceptor:
         headers: dict[str, list[str]],
         body: bytes,
     ) -> tuple[Entry, bool]:
+        # Scope check — skip recording if host is out of scope
+        if self._scope and not self._scope.is_in_scope(host):
+            entry = Entry(
+                method=method,
+                scheme=scheme,
+                host=host,
+                path=path,
+                query=query,
+                req_headers=dict(headers),
+                req_body=body,
+                protocol=scheme,
+            )
+            return entry, False  # pass through without recording
+
         entry = Entry(
             method=method,
             scheme=scheme,

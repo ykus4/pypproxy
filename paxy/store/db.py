@@ -56,7 +56,18 @@ class Database:
             if stmt.strip():
                 await self._db.execute(stmt)
         await self._db.commit()
+        # Initialize FTS index
+        from paxy.store.fts import setup_fts
+
+        await setup_fts(self._db)
         logger.info("database opened: %s", self._path)
+
+    async def search(self, query: str, limit: int = 50) -> list:
+        from paxy.store.fts import search
+
+        if not self._db:
+            return []
+        return await search(self._db, query, limit)
 
     async def close(self) -> None:
         if self._db:

@@ -29,6 +29,8 @@ class Entry:
     tags: list[str] = field(default_factory=list)
     modified: bool = False
     color: str = ""  # row highlight color (hex or name)
+    graphql_operation: str = ""  # operation name if GraphQL
+    graphql_op_type: str = ""  # query | mutation | subscription
 
     def to_dict(self) -> dict:
         import base64
@@ -51,6 +53,8 @@ class Entry:
             "tags": self.tags,
             "modified": self.modified,
             "color": self.color,
+            "graphql_operation": self.graphql_operation,
+            "graphql_op_type": self.graphql_op_type,
         }
 
 

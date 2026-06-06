@@ -131,11 +131,12 @@ def run_gui(args: argparse.Namespace) -> None:
     from nicegui import ui
 
     from paxy.api.server import init as api_init
-    from paxy.api.server import register_routes
+    from paxy.api.server import init_graphql, register_routes
     from paxy.ui.app import build_ui
 
     cfg, proxy, store, rules, intercept_mgr, db_path, cert_mgr, scope_mgr = _build_core(args)
     api_init(store, rules, scope_mgr)
+    init_graphql()
 
     register_routes(nicegui_app)
     build_ui(

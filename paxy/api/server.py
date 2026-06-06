@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 
+import httpx
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse, Response
@@ -285,6 +287,116 @@ async def active_scan(req: ScanRequest) -> JSONResponse:
     cats = req.categories or None
     results = await run_scan(entry, categories=cats, concurrency=req.concurrency)
     return JSONResponse([r.to_dict() for r in results])
+
+
+# --- GraphQL ---
+
+_gql_schema_store = None
+
+
+def init_graphql() -> None:
+    global _gql_schema_store
+    from paxy.graphql.schema_store import SchemaStore
+
+    _gql_schema_store = SchemaStore()
+
+
+class IntrospectRequest(BaseModel):
+    url: str
+    headers: dict[str, str] = {}
+
+
+@app.post("/api/graphql/introspect")
+async def graphql_introspect(req: IntrospectRequest) -> JSONResponse:
+    from paxy.graphql.introspection import fetch_schema
+
+    schema = await fetch_schema(req.url, req.headers)
+    if schema is None:
+        raise HTTPException(status_code=502, detail="Introspection failed or not supported")
+    if _gql_schema_store is not None:
+        from urllib.parse import urlparse
+
+        host = urlparse(req.url).netloc
+        _gql_schema_store.set(host, schema)
+    return JSONResponse(schema.to_dict())
+
+
+@app.get("/api/graphql/schemas")
+async def graphql_list_schemas() -> JSONResponse:
+    if _gql_schema_store is None:
+        return JSONResponse([])
+    return JSONResponse(
+        [
+            {"host": host, "query_type": s.query_type, "mutation_type": s.mutation_type}
+            for host, s in _gql_schema_store.all().items()
+        ]
+    )
+
+
+@app.get("/api/graphql/schema/{host}")
+async def graphql_get_schema(host: str) -> JSONResponse:
+    if _gql_schema_store is None:
+        raise HTTPException(status_code=404, detail="no schema store")
+    schema = _gql_schema_store.get(host)
+    if schema is None:
+        raise HTTPException(status_code=404, detail=f"no schema for {host}")
+    return JSONResponse(schema.to_dict())
+
+
+@app.delete("/api/graphql/schema/{host}")
+async def graphql_delete_schema(host: str) -> Response:
+    if _gql_schema_store is not None:
+        _gql_schema_store.delete(host)
+    return Response(status_code=204)
+
+
+class GQLReplayRequest(BaseModel):
+    entry_id: int
+    query: str = ""
+    variables: dict = {}
+    operation_name: str = ""
+
+
+@app.post("/api/graphql/replay")
+async def graphql_replay(req: GQLReplayRequest) -> JSONResponse:
+    assert _store is not None
+    import json as _json
+    import time
+
+    entry = _store.get(req.entry_id)
+    if entry is None:
+        raise HTTPException(status_code=404, detail="entry not found")
+
+    url = f"{entry.scheme}://{entry.host}{entry.path}"
+    body_dict: dict = {}
+    if entry.req_body:
+        with contextlib.suppress(Exception):
+            body_dict = _json.loads(entry.req_body)
+
+    if req.query:
+        body_dict["query"] = req.query
+    if req.variables:
+        body_dict["variables"] = req.variables
+    if req.operation_name:
+        body_dict["operationName"] = req.operation_name
+
+    req_headers = {k: ", ".join(v) for k, v in entry.req_headers.items()}
+    start = time.monotonic()
+    try:
+        async with httpx.AsyncClient(verify=False, timeout=30, http2=True) as client:
+            resp = await client.post(url, json=body_dict, headers=req_headers)
+        dur = int((time.monotonic() - start) * 1000)
+        return JSONResponse(
+            {
+                "status_code": resp.status_code,
+                "duration_ms": dur,
+                "body": resp.json()
+                if "json" in resp.headers.get("content-type", "")
+                else resp.text,
+            }
+        )
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=502)
 
 
 # --- clear ---

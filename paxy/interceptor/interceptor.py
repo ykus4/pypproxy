@@ -54,6 +54,23 @@ class Interceptor:
             protocol=scheme,
         )
 
+        # GraphQL detection
+        from paxy.graphql.detector import (
+            extract_operation_name,
+            extract_operation_type,
+            is_graphql,
+            parse_operation,
+        )
+
+        if is_graphql(entry):
+            op = parse_operation(body)
+            entry.graphql_op_type = extract_operation_type(op["query"])
+            entry.graphql_operation = extract_operation_name(op["query"]) or op.get(
+                "operationName", ""
+            )
+            entry.tags.append("graphql")
+            entry.protocol = "graphql"
+
         ctx = MatchContext(
             method=method,
             host=host,

@@ -79,6 +79,7 @@ def build_ui(
             diff_tab = ui.tab("Diff", icon="difference")
             security_tab = ui.tab("Security", icon="security")
             scan_tab = ui.tab("Scan", icon="search")
+            graphql_tab = ui.tab("GraphQL", icon="account_tree")
             import_tab_btn = ui.tab("Import/Search", icon="upload")
 
         with (
@@ -126,6 +127,11 @@ def build_ui(
                 from .scan_tab import build_scan_tab
 
                 scan_state = build_scan_tab(store)
+
+            with ui.tab_panel(graphql_tab).classes("p-0 h-full"):
+                from .graphql_tab import build_graphql_tab
+
+                gql_state = build_graphql_tab(store)
 
             with ui.tab_panel(import_tab_btn).classes("p-0 h-full"):
                 from .import_tab import build_import_tab
@@ -183,6 +189,14 @@ def build_ui(
                     "Active Scan",
                     on_click=lambda: (scan_state["open_entry"](entry), tabs.set_value(scan_tab)),
                 )
+                if "graphql" in (entry.tags or []):
+                    ui.menu_item(
+                        "Open in GraphQL tab",
+                        on_click=lambda: (
+                            gql_state["open_entry"](entry),
+                            tabs.set_value(graphql_tab),
+                        ),
+                    )
                 ui.menu_item(
                     "Set as Diff left",
                     on_click=lambda: _set_diff_left(entry, state),

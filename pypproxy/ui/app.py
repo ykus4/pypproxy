@@ -78,8 +78,12 @@ def build_ui(
             bulk_tab = ui.tab("Bulk Sender", icon="dynamic_feed")
             diff_tab = ui.tab("Diff", icon="difference")
             security_tab = ui.tab("Security", icon="security")
+            advsec_tab = ui.tab("Adv Security", icon="shield")
             scan_tab = ui.tab("Scan", icon="search")
             graphql_tab = ui.tab("GraphQL", icon="account_tree")
+            codegen_tab = ui.tab("Code Gen", icon="code")
+            openapi_tab_btn = ui.tab("OpenAPI", icon="description")
+            analytics_tab_btn = ui.tab("Analytics", icon="bar_chart")
             import_tab_btn = ui.tab("Import/Search", icon="upload")
 
         with (
@@ -123,6 +127,11 @@ def build_ui(
 
                 sec_state = build_security_tab(store)
 
+            with ui.tab_panel(advsec_tab).classes("p-0 h-full"):
+                from .advanced_security_tab import build_advanced_security_tab
+
+                advsec_state = build_advanced_security_tab(store)
+
             with ui.tab_panel(scan_tab).classes("p-0 h-full"):
                 from .scan_tab import build_scan_tab
 
@@ -132,6 +141,21 @@ def build_ui(
                 from .graphql_tab import build_graphql_tab
 
                 gql_state = build_graphql_tab(store)
+
+            with ui.tab_panel(codegen_tab).classes("p-0 h-full"):
+                from .codegen_tab import build_codegen_tab
+
+                codegen_state = build_codegen_tab(store)
+
+            with ui.tab_panel(openapi_tab_btn).classes("p-0 h-full"):
+                from .openapi_tab import build_openapi_tab
+
+                build_openapi_tab(store)
+
+            with ui.tab_panel(analytics_tab_btn).classes("p-0 h-full"):
+                from .analytics_tab import build_analytics_tab
+
+                build_analytics_tab(store)
 
             with ui.tab_panel(import_tab_btn).classes("p-0 h-full"):
                 from .import_tab import build_import_tab
@@ -186,8 +210,22 @@ def build_ui(
                     on_click=lambda: (sec_state["open_entry"](entry), tabs.set_value(security_tab)),
                 )
                 ui.menu_item(
+                    "Adv Security check",
+                    on_click=lambda: (
+                        advsec_state["open_entry"](entry),
+                        tabs.set_value(advsec_tab),
+                    ),
+                )
+                ui.menu_item(
                     "Active Scan",
                     on_click=lambda: (scan_state["open_entry"](entry), tabs.set_value(scan_tab)),
+                )
+                ui.menu_item(
+                    "Generate Code",
+                    on_click=lambda: (
+                        codegen_state["open_entry"](entry),
+                        tabs.set_value(codegen_tab),
+                    ),
                 )
                 if "graphql" in (entry.tags or []):
                     ui.menu_item(
